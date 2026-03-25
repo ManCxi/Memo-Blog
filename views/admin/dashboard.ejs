@@ -1,0 +1,188 @@
+<% const activePage='dashboard' %>
+  <%- include('partials/layout-head') %>
+
+    <!-- Stat cards -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-blue">📝</div>
+        <div>
+          <div class="stat-value">
+            <%= stats.articleCount %>
+          </div>
+          <div class="stat-label">全部文章</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-green">✅</div>
+        <div>
+          <div class="stat-value">
+            <%= stats.publishedCount %>
+          </div>
+          <div class="stat-label">已发布</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-yellow">🗂️</div>
+        <div>
+          <div class="stat-value">
+            <%= stats.categoryCount %>
+          </div>
+          <div class="stat-label">分类数量</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-orange">🏷️</div>
+        <div>
+          <div class="stat-value">
+            <%= stats.tagCount %>
+          </div>
+          <div class="stat-label">标签数量</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--accent-tint);">👁️</div>
+        <div>
+          <div class="stat-value">
+            <%= stats.totalPv ? stats.totalPv.toLocaleString() : 0 %>
+          </div>
+          <div class="stat-label">总阅读量</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-purple">📄</div>
+        <div>
+          <div class="stat-value">
+            <%= stats.pageCount %>
+          </div>
+          <div class="stat-label">独立页面</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--admin-yellow-tint);color:var(--admin-yellow);">📦</div>
+        <div>
+          <div class="stat-value">
+            <%= stats.draftCount %>
+          </div>
+          <div class="stat-label">草稿箱</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="quick-actions mb-20">
+      <a href="/admin/articles/create" class="btn btn-primary">✏️ 写新文章</a>
+      <a href="/admin/pages" class="btn btn-secondary">📄 页面管理</a>
+      <a href="/admin/articles" class="btn btn-secondary">📋 管理文章</a>
+      <a href="/admin/taxonomy" class="btn btn-secondary">🗂️ 分类/标签管理</a>
+      <a href="/admin/media" class="btn btn-secondary">🖼️ 附件库</a>
+      <a href="/admin/settings" class="btn btn-secondary">⚙️ 系统设置</a>
+      <a href="/" target="_blank" class="btn btn-secondary">🌐 返回前台</a>
+    </div>
+
+    <!-- Recent articles -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">🕐 最新发布的文章</span>
+        <a href="/admin/articles" class="btn btn-secondary btn-sm">查看全部</a>
+      </div>
+
+      <!-- Desktop table -->
+      <div class="table-responsive-wrap">
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:38%">标题</th>
+                <th>分类</th>
+                <th>状态</th>
+                <th>阅读</th>
+                <th>发布时间</th>
+                <th class="actions-col">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (recentArticles.length===0) { %>
+                <tr>
+                  <td colspan="6" class="table-empty">暂无文章，<a href="/admin/articles/create"
+                      style="color:var(--accent);">去发布第一篇</a></td>
+                </tr>
+                <% } %>
+                  <% recentArticles.forEach(article=> { %>
+                    <tr>
+                      <td>
+                        <a href="/article/<%= article.slug %>" target="_blank"
+                          style="font-weight:600;color:var(--text-primary);text-decoration:none;transition:color 0.15s;"
+                          onmouseover="this.style.color='var(--accent)'"
+                          onmouseout="this.style.color='var(--text-primary)'">
+                          <%= article.title %>
+                        </a>
+                      </td>
+                      <td>
+                        <% if (article.category) { %>
+                          <span class="status-badge badge-category">
+                            <%= article.category.name %>
+                          </span>
+                          <% } else { %>
+                            <span style="color:var(--text-tertiary);">—</span>
+                            <% } %>
+                      </td>
+                      <td>
+                        <span
+                          class="status-badge <%= article.status === 'published' ? 'status-published' : 'status-draft' %>">
+                          <%= article.status==='published' ? '已发布' : '草稿' %>
+                        </span>
+                      </td>
+                      <td class="text-tertiary text-sm">👁 <%= (article.views || 0).toLocaleString() %>
+                      </td>
+                      <td class="text-tertiary text-sm">
+                        <%= new Date(article.publishedAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) %>
+                      </td>
+                      <td>
+                        <a href="/admin/articles/<%= article.id %>/edit" class="btn btn-edit btn-sm">✏️ 编辑</a>
+                      </td>
+                    </tr>
+                    <% }) %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile card list -->
+        <div class="mobile-card-list">
+          <% if (recentArticles.length===0) { %>
+            <div class="table-empty">暂无文章，<a href="/admin/articles/create" style="color:var(--accent);">去发布第一篇</a></div>
+            <% } %>
+              <% recentArticles.forEach(article=> { %>
+                <div class="mobile-list-item">
+                  <div class="mobile-list-item-title">
+                    <% if (article.pinned) { %><span class="status-badge status-pinned"
+                        style="font-size:10px;">📌</span>
+                      <% } %>
+                        <a href="/article/<%= article.slug %>" target="_blank" style="color:var(--text-primary);">
+                          <%= article.title %>
+                        </a>
+                  </div>
+                  <div class="mobile-list-item-meta">
+                    <% if (article.category) { %>
+                      <span class="status-badge badge-category">
+                        <%= article.category.name %>
+                      </span>
+                      <% } %>
+                        <span
+                          class="status-badge <%= article.status === 'published' ? 'status-published' : 'status-draft' %>">
+                          <%= article.status==='published' ? '已发布' : '草稿' %>
+                        </span>
+                        <span>👁 <%= (article.views || 0).toLocaleString() %></span>
+                        <span>
+                          <%= new Date(article.publishedAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) %>
+                        </span>
+                  </div>
+                  <div class="mobile-list-item-actions">
+                    <a href="/admin/articles/<%= article.id %>/edit" class="btn btn-edit btn-sm">✏️ 编辑</a>
+                  </div>
+                </div>
+                <% }) %>
+        </div>
+      </div>
+    </div>
+
+    <%- include('partials/layout-foot') %>

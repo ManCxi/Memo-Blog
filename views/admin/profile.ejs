@@ -1,0 +1,170 @@
+<%- include('./partials/layout-head', { activePage: 'profile' }) %>
+
+<div class="page-header">
+  <h1 class="page-title">个人中心</h1>
+</div>
+
+<div class="profile-layout" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; max-width: 1000px;">
+  <!-- ── 左侧：基本资料 ── -->
+  <div>
+    <form method="POST" action="/admin/profile">
+      <span class="settings-group-title">基本资料</span>
+      <div class="settings-group">
+        <!-- 头像 -->
+        <div class="settings-row">
+          <div class="settings-label">头像</div>
+          <div class="settings-control">
+            <div class="profile-avatar-wrap" style="margin-right: 8px;">
+              <% if (user.avatar) { %>
+              <img src="<%= user.avatar %>" id="avatarPreview" class="profile-avatar-img" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: block;">
+              <% } else { %>
+              <div class="profile-avatar-placeholder" id="avatarPreview" style="width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent), var(--accent-light)); color: #fff; font-size: 18px; font-weight: 700;"><%= user.nickname ? user.nickname[0] : 'A' %></div>
+              <% } %>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openAttachmentPicker(selectAvatar, {accept:'image'})">更换</button>
+            <input type="hidden" name="avatar" id="avatarInput" value="<%= user.avatar || '' %>">
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-label">昵称</div>
+          <div class="settings-control">
+            <input type="text" name="nickname" class="form-control" value="<%= user.nickname || '' %>" required>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label">邮箱</div>
+          <div class="settings-control">
+            <input type="email" name="email" class="form-control" value="<%= user.email || '' %>" placeholder="未设置">
+          </div>
+        </div>
+      </div>
+
+      <span class="settings-group-title">扩展信息</span>
+      <div class="settings-group">
+        <div class="settings-row-col">
+          <div class="settings-label">个人简介</div>
+          <textarea name="bio" class="form-control" rows="3" placeholder="写点什么介绍自己..."><%= bloggerInfo.bio || '' %></textarea>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label">GitHub</div>
+          <div class="settings-control">
+            <input type="url" name="github" class="form-control" value="<%= bloggerInfo.github || '' %>" placeholder="https://github.com/...">
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label">QQ</div>
+          <div class="settings-control">
+            <input type="text" name="qq" class="form-control" value="<%= bloggerInfo.qq || '' %>" placeholder="输入 QQ 号">
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label">个人网站</div>
+          <div class="settings-control">
+            <input type="url" name="website" class="form-control" value="<%= bloggerInfo.website || '' %>" placeholder="https://...">
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">保存资料</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── 右侧：修改密码 & 账号 ── -->
+  <div>
+    <span class="settings-group-title">账号信息</span>
+    <div class="settings-group">
+      <div class="settings-row">
+        <div class="settings-label">用户名</div>
+        <div class="settings-control" style="color: var(--text-secondary); font-size: 15px;"><%= user.username %></div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">角色</div>
+        <div class="settings-control"><span class="status-badge badge-blue" style="font-size: 13px;"><%= user.role %></span></div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">注册时间</div>
+        <div class="settings-control" style="color: var(--text-secondary); font-size: 15px;"><%= new Date(user.createdAt).toLocaleDateString('zh-CN') %></div>
+      </div>
+    </div>
+
+    <form id="passwordForm" onsubmit="event.preventDefault(); submitPasswordForm()">
+      <span class="settings-group-title">修改密码</span>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div class="settings-label">当前密码</div>
+          <div class="settings-control">
+            <input type="password" name="currentPassword" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label">
+            新密码
+            <span class="settings-desc">至少 6 位字符</span>
+          </div>
+          <div class="settings-control">
+            <input type="password" name="newPassword" class="form-control" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label">确认新密码</div>
+          <div class="settings-control">
+            <input type="password" name="confirmPassword" class="form-control" placeholder="••••••••" required autocomplete="new-password">
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom: 24px;">
+        <button type="submit" class="btn btn-danger" style="width: 100%; justify-content: center;">修改密码</button>
+        <p style="font-size:13px;color:var(--text-tertiary);margin-top:12px;text-align:center;">修改密码后将自动退出登录，需重新登录。</p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function selectAvatar(url) {
+  document.getElementById('avatarInput').value = url;
+  const preview = document.getElementById('avatarPreview');
+  if (preview.tagName === 'IMG') {
+    preview.src = url;
+  } else {
+    const img = document.createElement('img');
+    img.src = url;
+    img.id = 'avatarPreview';
+    img.className = 'profile-avatar-img';
+    img.style.cssText = 'width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: block;';
+    preview.replaceWith(img);
+  }
+}
+
+async function submitPasswordForm() {
+  const form = document.getElementById('passwordForm');
+  const fd = new FormData(form);
+  const body = Object.fromEntries(fd.entries());
+  const btn = form.querySelector('button[type="submit"]');
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = '提交中...';
+  try {
+    const r = await fetch('/admin/profile/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    btn.disabled = false; btn.textContent = origText;
+    if (d.ok) {
+      showToast('密码修改成功，请重新登录！', 'success');
+      setTimeout(() => location.href = '/admin/login', 1500);
+    } else {
+      showToast(d.message || '修改失败', 'error');
+    }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = origText;
+    showToast('处理异常', 'error');
+  }
+}
+</script>
+
+<%- include('./partials/layout-foot') %>

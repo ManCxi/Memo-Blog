@@ -1,0 +1,17 @@
+<% 
+  const _favicon = (typeof settings !== 'undefined' && settings && settings.site_logo)
+    ? String(settings.site_logo).trim()
+    : '';
+%>
+<% if (_favicon) {
+  const ext = (_favicon.split('.').pop() || '').toLowerCase().split('?')[0];
+  let iconType = 'image/png';
+  if (ext === 'svg') iconType = 'image/svg+xml';
+  else if (ext === 'ico') iconType = 'image/x-icon';
+  else if (ext === 'jpg' || ext === 'jpeg') iconType = 'image/jpeg';
+  else if (ext === 'gif') iconType = 'image/gif';
+  else if (ext === 'webp') iconType = 'image/webp';
+%>
+  <link rel="icon" href="<%= _favicon %>" type="<%= iconType %>">
+  <link rel="apple-touch-icon" href="<%= _favicon %>">
+<% } %>

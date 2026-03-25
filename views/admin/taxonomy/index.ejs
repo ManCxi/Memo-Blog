@@ -1,0 +1,533 @@
+<% const activePage = 'taxonomy' %>
+<%- include('../partials/layout-head') %>
+
+<style>
+@media(min-width:900px){
+  .tax-layout{ grid-template-columns:320px 1fr !important; }
+  .tag-layout{ grid-template-columns:320px 1fr !important; }
+}
+/* 分类树样式 */
+.cat-tree{
+  list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:4px;
+  min-height:24px;
+}
+.cat-item{
+  border:1px solid var(--surface-border);
+  background:var(--surface-1-bg);
+  border-radius:12px;
+  display:flex; flex-direction:column; gap:0;
+  transition: background .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.cat-item-inner{
+  padding:10px 12px;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.cat-drag-handle{
+  flex-shrink:0;
+  width:22px; color:var(--text-tertiary);
+  cursor:grab;
+  user-select:none;
+  font-size:14px; line-height:1;
+  letter-spacing:-2px;
+  opacity:.75;
+  padding:4px 2px;
+  border-radius:6px;
+  transition: opacity .15s, background .15s;
+}
+.cat-drag-handle:hover{ opacity:1; background:var(--surface-2-bg, rgba(0,0,0,.04)); }
+.cat-item.dragging{
+  opacity:.65;
+  box-shadow:0 8px 24px rgba(0,0,0,.12);
+}
+.cat-item.dragging .cat-drag-handle{ cursor:grabbing; }
+.cat-item-row{ display:flex; align-items:center; gap:8px; min-width:0; flex:1; }
+.sub-list{
+  list-style:none;
+  padding:4px 0 8px 0;
+  margin:0 0 4px 12px;
+  padding-left:14px;
+  border-left:2px solid var(--surface-border-2, var(--surface-border));
+  display:flex; flex-direction:column; gap:4px;
+  min-height:6px;
+}
+.sub-list:empty{ min-height:8px; padding-bottom:4px; margin-bottom:0; }
+.cat-help-line{
+  font-size:12px; color:var(--text-tertiary); line-height:1.5;
+  margin-top:4px;
+}
+.cat-item.drop-before{
+  box-shadow: inset 0 3px 0 0 var(--accent, #3b82f6);
+  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--surface-border));
+}
+.cat-item.drop-after{
+  box-shadow: inset 0 -3px 0 0 var(--accent, #3b82f6);
+  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--surface-border));
+}
+.cat-item.drop-into{
+  background: color-mix(in srgb, var(--accent, #3b82f6) 12%, var(--surface-1-bg));
+  border-style:dashed;
+  border-color: var(--accent, #3b82f6);
+}
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+  .cat-item.drop-into{ background: rgba(59,130,246,.08); border-color: var(--accent, #3b82f6); }
+  .cat-item.drop-before, .cat-item.drop-after { border-color: var(--accent, #3b82f6); }
+}
+#catDragLabel{
+  position:fixed; z-index:9999; pointer-events:none; display:none;
+  padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600;
+  background: var(--surface-1-bg); border:1px solid var(--surface-border);
+  box-shadow:0 6px 20px rgba(0,0,0,.15); color:var(--accent, #2563eb);
+}
+</style>
+
+<!-- 标签导航页签 (简单的锚点跳转或视觉分隔) -->
+<div style="margin-bottom:20px;display:flex;gap:12px;border-bottom:1px solid var(--surface-border);padding-bottom:12px;">
+  <h2 style="font-size:18px;margin:0;">分类与标签管理</h2>
+</div>
+
+<!-- ================= 分类区域 ================= -->
+<div class="tax-layout" style="display:grid;grid-template-columns:1fr;gap:20px;margin-bottom:40px;">
+  <!-- Create form -->
+  <div class="cat-form-card">
+    <div class="cat-form-header">🗂️ 新建分类</div>
+    <div class="cat-form-body">
+      <form method="POST" action="/admin/categories">
+        <div class="form-group">
+          <label class="form-label">分类名称 <span style="color:var(--admin-red);">*</span></label>
+          <input type="text" name="name" class="form-control form-control-sm" placeholder="输入分类名称" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">上级分类</label>
+          <select name="parentId" class="form-control form-control-sm" id="createCatParent">
+            <option value="">无（一级）</option>
+            <% if (typeof categoriesFlat !== 'undefined' && categoriesFlat.length) { %>
+              <% categoriesFlat.forEach(row => { %>
+            <option value="<%= row.id %>"><%= '\u3000'.repeat(row.depth) %><%= row.depth ? '\u2514 ' : '' %><%= row.name %></option>
+              <% }) %>
+            <% } %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">描述</label>
+          <textarea name="description" class="form-control form-control-sm" rows="2" placeholder="分类简介（可选）"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">排序</label>
+          <input type="number" name="sort" class="form-control form-control-sm" value="0" min="0" style="width:90px;">
+          <p class="form-text">数字越小越靠前（也可在列表中拖拽调整）</p>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">+ 新建分类</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <span class="table-card-title">分类树（拖拽调整层级与顺序）</span>
+      <span class="badge"><%= categories.length %> 个</span>
+    </div>
+    <div class="table-responsive-wrap" style="padding:12px 16px;">
+      <p class="cat-help-line">
+        按住左侧 <strong style="color:var(--text-secondary);">⋮⋮</strong> 拖动：靠上为「插到上方」，靠下为「插到下方」，停在中间为「放入其下」成为子分类。不可拖入自身或自己的子树。
+      </p>
+      <ul id="catRoot" class="cat-tree" aria-label="分类树"></ul>
+      <div id="catDragLabel" aria-hidden="true"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="text-tertiary" id="reorderHint" style="font-size:12px;color:var(--text-tertiary);">松手后会自动保存；若提示失败可刷新页面后重试</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr style="border:none;border-top:1px dashed var(--surface-border);margin:40px 0;">
+
+<!-- ================= 标签区域 ================= -->
+<div class="tag-layout" style="display:grid;grid-template-columns:1fr;gap:20px;">
+  <!-- Create form -->
+  <div class="cat-form-card">
+    <div class="cat-form-header">🏷️ 新建标签</div>
+    <div class="cat-form-body">
+      <form method="POST" action="/admin/tags">
+        <div class="form-group">
+          <label class="form-label">标签名称 <span style="color:var(--admin-red);">*</span></label>
+          <input type="text" name="name" class="form-control form-control-sm"
+            placeholder="输入标签名称" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">+ 创建标签</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tag cloud -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <span class="table-card-title">🏷️ 标签列表</span>
+      <span class="badge"><%= tags.length %> 个</span>
+    </div>
+    <div class="tag-cloud-wrap">
+      <% if (tags.length === 0) { %>
+      <p class="text-tertiary text-sm" style="padding:8px;">暂无标签，去新建一个吧</p>
+      <% } %>
+      <% tags.forEach(tag => { %>
+      <div class="tag-pill">
+        <a href="/tag/<%= tag.slug %>" target="_blank" style="color:var(--text-primary);text-decoration:none;font-weight:500;">
+          # <%= tag.name %>
+        </a>
+        <span class="tag-pill-count"><%= tag.articles ? tag.articles.length : 0 %></span>
+        <button class="tag-pill-btn edit" title="编辑"
+          onclick="openEditTagModal(<%= tag.id %>, '<%= tag.name.replace(/'/g, "\\'") %>')">✏️</button>
+        <form action="/admin/tags/<%= tag.id %>?_method=DELETE" method="POST" style="display:inline;"
+          onsubmit="return confirm('确定删除标签「<%= tag.name %>」吗？')">
+          <button type="submit" class="tag-pill-btn del" title="删除">✕</button>
+        </form>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+
+<!-- Edit modal for Category -->
+<div class="modal-overlay" id="editCatModal" style="display:none;">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">✏️ 编辑分类</div>
+      <button type="button" class="modal-close" onclick="closeModal('editCatModal')">×</button>
+    </div>
+    <form id="editCatForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">分类名称</label>
+          <input type="text" name="name" id="editCatName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">描述</label>
+          <textarea name="description" id="editCatDesc" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">排序</label>
+          <input type="number" name="sort" id="editCatSort" class="form-control" min="0" style="width:100px;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">上级分类</label>
+          <select name="parentId" id="editCatParent" class="form-control">
+            <option value="">无（一级）</option>
+            <% if (typeof categoriesFlat !== 'undefined' && categoriesFlat.length) { %>
+              <% categoriesFlat.forEach(row => { %>
+            <option value="<%= row.id %>"><%= '\u3000'.repeat(row.depth) %><%= row.depth ? '\u2514 ' : '' %><%= row.name %></option>
+              <% }) %>
+            <% } %>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editCatModal')">取消</button>
+        <button type="submit" class="btn btn-primary">保存修改</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit modal for Tag -->
+<div class="modal-overlay" id="editTagModal" style="display:none;">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-header">
+      <div class="modal-title">✏️ 编辑标签</div>
+      <button type="button" class="modal-close" onclick="closeModal('editTagModal')">×</button>
+    </div>
+    <form id="editTagForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">标签名称</label>
+          <input type="text" name="name" id="editTagName" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editTagModal')">取消</button>
+        <button type="submit" class="btn btn-primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ==================== Category Logic ====================
+const cats = <%- JSON.stringify(categories) %>;
+const catRoot = document.getElementById('catRoot');
+const dragLabel = document.getElementById('catDragLabel');
+let dragEl = null;
+let autoSaveTimer = null;
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  const d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+function buildTree() {
+  const byParent = {};
+  cats.forEach(c => {
+    const p = c.parentId || 0;
+    if (!byParent[p]) byParent[p] = [];
+    byParent[p].push(c);
+  });
+  Object.values(byParent).forEach(arr => arr.sort((a,b)=> (a.sort - b.sort) || (a.id - b.id)));
+  catRoot.innerHTML = '';
+  (byParent[0] || []).forEach(c => catRoot.appendChild(renderItem(c, byParent)));
+}
+
+function renderItem(c, byParent) {
+  const li = document.createElement('li');
+  li.className = 'cat-item';
+  li.dataset.id = String(c.id);
+  const artCount = (c.articles && c.articles.length) || 0;
+  const descHtml = c.description
+    ? `<span class="text-tertiary" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;">${escapeHtml(c.description)}</span>`
+    : '';
+  li.innerHTML = `
+    <div class="cat-item-inner">
+      <div class="cat-item-row">
+        <span class="cat-drag-handle" title="拖动排序 / 调整层级" aria-label="拖动">⋮⋮</span>
+        <strong style="white-space:nowrap;">${escapeHtml(c.name)}</strong>
+        <span class="badge badge-blue">${artCount}</span>
+        ${descHtml}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button type="button" class="btn btn-edit btn-sm">编辑</button>
+        <form action="/admin/categories/${c.id}?_method=DELETE" method="POST" onsubmit="return confirm('删除分类不会删除其下的文章，确定继续？')">
+          <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+        </form>
+      </div>
+    </div>`;
+  const btn = li.querySelector('.btn-edit');
+  btn.addEventListener('click', () => openEditCatModal(c.id));
+  li.querySelectorAll('button, input, a, form').forEach(el => { el.setAttribute('draggable', 'false'); });
+  const handle = li.querySelector('.cat-drag-handle');
+  if (handle) handle.setAttribute('draggable', 'true');
+
+  const subData = byParent[c.id] || [];
+  if (subData.length) {
+    const ul = document.createElement('ul');
+    ul.className = 'sub-list';
+    subData.forEach(sc => ul.appendChild(renderItem(sc, byParent)));
+    li.appendChild(ul);
+  }
+  return li;
+}
+
+function isInvalidDropTarget(draggedLi, targetLi) {
+  if (!draggedLi || !targetLi || draggedLi === targetLi) return true;
+  return draggedLi.contains(targetLi);
+}
+
+function clearDropIndicators() {
+  catRoot.querySelectorAll('.cat-item.drop-before,.cat-item.drop-after,.cat-item.drop-into').forEach(el => {
+    el.classList.remove('drop-before', 'drop-after', 'drop-into');
+  });
+}
+
+function zoneFromPointer(li, clientY) {
+  const rect = li.querySelector('.cat-item-inner').getBoundingClientRect();
+  const y = clientY - rect.top;
+  const h = Math.max(rect.height, 1);
+  if (y < h * 0.28) return 'before';
+  if (y > h * 0.72) return 'after';
+  return 'into';
+}
+
+function ensureSubList(parentLi) {
+  let ul = parentLi.querySelector(':scope > ul.sub-list');
+  if (!ul) {
+    ul = document.createElement('ul');
+    ul.className = 'sub-list';
+    parentLi.appendChild(ul);
+  }
+  return ul;
+}
+
+function pruneEmptySubLists() {
+  catRoot.querySelectorAll('ul.sub-list').forEach(ul => {
+    if (!ul.children.length) ul.remove();
+  });
+}
+
+function descendantIdSet(rootId) {
+  const byParent = {};
+  cats.forEach(c => {
+    const p = c.parentId || 0;
+    if (!byParent[p]) byParent[p] = [];
+    byParent[p].push(c.id);
+  });
+  const set = new Set();
+  const walk = (id) => {
+    (byParent[id] || []).forEach(cid => { set.add(cid); walk(cid); });
+  };
+  walk(rootId);
+  return set;
+}
+
+function openEditCatModal(id) {
+  const cat = cats.find(c => c.id === id);
+  if (!cat) return;
+  document.getElementById('editCatForm').action = `/admin/categories/${id}?_method=PUT`;
+  document.getElementById('editCatName').value = cat.name;
+  document.getElementById('editCatDesc').value = cat.description || '';
+  document.getElementById('editCatSort').value = cat.sort;
+  const bad = descendantIdSet(id);
+  bad.add(id);
+  const sel = document.getElementById('editCatParent');
+  Array.from(sel.options).forEach(opt => {
+    if (!opt.value) { opt.disabled = false; return; }
+    const oid = parseInt(opt.value, 10);
+    opt.disabled = bad.has(oid);
+  });
+  sel.value = cat.parentId ? String(cat.parentId) : '';
+  if (bad.has(parseInt(sel.value, 10))) sel.value = '';
+  document.getElementById('editCatModal').style.display = 'flex';
+  openModal('editCatModal');
+}
+
+catRoot.addEventListener('dragstart', (e) => {
+  const li = e.target.closest('.cat-item');
+  if (!li || !catRoot.contains(li)) return;
+  if (e.target.closest('button, a, form') && !e.target.closest('.cat-drag-handle')) {
+    e.preventDefault();
+    return;
+  }
+  const h = e.target.closest('.cat-drag-handle');
+  if (!h) {
+    e.preventDefault();
+    return;
+  }
+  dragEl = li;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', li.dataset.id);
+  try { e.dataTransfer.setDragImage(li.querySelector('.cat-item-inner'), 12, 12); } catch (_) {}
+  li.classList.add('dragging');
+  dragLabel.style.display = 'block';
+  dragLabel.textContent = '移动中…';
+});
+
+catRoot.addEventListener('dragend', () => {
+  if (dragEl) dragEl.classList.remove('dragging');
+  dragEl = null;
+  clearDropIndicators();
+  dragLabel.style.display = 'none';
+});
+
+document.addEventListener('dragover', (e) => {
+  if (!dragEl) return;
+  const r = catRoot.getBoundingClientRect();
+  if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+    dragLabel.style.left = (e.clientX + 14) + 'px';
+    dragLabel.style.top = (e.clientY + 14) + 'px';
+  }
+});
+
+catRoot.addEventListener('dragover', (e) => {
+  if (!dragEl) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  clearDropIndicators();
+  let li = e.target.closest('.cat-item');
+  if (li && isInvalidDropTarget(dragEl, li)) li = null;
+  if (!li) {
+    dragLabel.textContent = '松开 — 放到末位';
+    return;
+  }
+  const z = zoneFromPointer(li, e.clientY);
+  dragLabel.textContent = z === 'before' ? '松开 — 插到上方' : z === 'after' ? '松开 — 插到下方' : '松开 — 设为子分类';
+  li.classList.add(z === 'before' ? 'drop-before' : z === 'after' ? 'drop-after' : 'drop-into');
+});
+
+catRoot.addEventListener('dragleave', (e) => {
+  if (!dragEl) return;
+  if (!catRoot.contains(e.relatedTarget)) clearDropIndicators();
+});
+
+catRoot.addEventListener('drop', (e) => {
+  if (!dragEl) return;
+  e.preventDefault();
+  clearDropIndicators();
+  let li = e.target.closest('.cat-item');
+  if (li && isInvalidDropTarget(dragEl, li)) li = null;
+
+  if (!li) {
+    catRoot.appendChild(dragEl);
+    pruneEmptySubLists();
+    dragLabel.style.display = 'none';
+    scheduleAutoSave();
+    return;
+  }
+
+  const zone = zoneFromPointer(li, e.clientY);
+  const parentUl = li.parentElement;
+
+  if (zone === 'before') {
+    parentUl.insertBefore(dragEl, li);
+  } else if (zone === 'after') {
+    if (li.nextElementSibling) parentUl.insertBefore(dragEl, li.nextElementSibling);
+    else parentUl.appendChild(dragEl);
+  } else {
+    const sub = ensureSubList(li);
+    sub.appendChild(dragEl);
+  }
+  pruneEmptySubLists();
+  dragLabel.style.display = 'none';
+  scheduleAutoSave();
+});
+
+function collectFromUl(ul, parentId, items) {
+  Array.from(ul.children).forEach((node, idx) => {
+    if (!node.classList || !node.classList.contains('cat-item')) return;
+    const id = parseInt(node.dataset.id, 10);
+    items.push({ id, sort: idx, parentId });
+    const sub = node.querySelector(':scope > ul.sub-list');
+    if (sub && sub.children.length) collectFromUl(sub, id, items);
+  });
+}
+
+function scheduleAutoSave() {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = null;
+    saveOrder();
+  }, 380);
+}
+
+function saveOrder() {
+  const items = [];
+  collectFromUl(catRoot, null, items);
+  fetch('/admin/categories/reorder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items })
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        showToast('已自动保存');
+        items.forEach(it => {
+          const c = cats.find(x => x.id === it.id);
+          if (c) { c.sort = it.sort; c.parentId = it.parentId; }
+        });
+      } else showToast('保存失败，请重试', 'error');
+    })
+    .catch(() => showToast('网络异常，未保存', 'error'));
+}
+
+buildTree();
+
+
+// ==================== Tag Logic ====================
+function openEditTagModal(id, name) {
+  document.getElementById('editTagForm').action = `/admin/tags/${id}?_method=PUT`;
+  document.getElementById('editTagName').value = name;
+  document.getElementById('editTagModal').style.display = 'flex';
+  openModal('editTagModal');
+}
+</script>
+
+<%- include('../partials/layout-foot') %>

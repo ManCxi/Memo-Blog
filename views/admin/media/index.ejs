@@ -1,0 +1,394 @@
+<% const activePage = 'media' %>
+<% 
+function getFileIcon(type) {
+  const map = { image:'🖼', video:'🎬', audio:'🎵', document:'📄', other:'📦' };
+  return map[type] || '📦';
+}
+%>
+<%- include('../partials/layout-head') %>
+
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+  <h2 style="font-size:18px;font-weight:700;margin:0;">附件库</h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <label class="btn btn-primary" for="uploadInput">
+      ⬆ 上传文件
+      <input type="file" id="uploadInput" multiple accept="*/*" style="display:none" onchange="uploadFiles(this.files)">
+    </label>
+    <button class="btn btn-secondary" onclick="syncFiles()">🔄 同步本地</button>
+    <button class="btn btn-danger" id="batchDeleteBtn" style="display:none;" onclick="batchDelete()">🗑 批量删除</button>
+  </div>
+</div>
+
+<!-- 筛选栏 -->
+<div class="admin-card" style="margin-bottom:16px;padding:14px 20px;">
+  <div class="filter-row">
+    <div class="filter-types">
+      <% const types = [['all','全部'],['image','图片'],['video','视频'],['audio','音频'],['document','文档'],['other','其他']]; %>
+      <% types.forEach(([t, label]) => { %>
+      <a href="?type=<%= t %>&keyword=<%= keyword %>&view=<%= view %>"
+         class="type-chip <%= type === t ? 'active' : '' %>"><%= label %></a>
+      <% }) %>
+    </div>
+    <form method="GET" action="/admin/media" class="search-form-inline">
+      <input type="hidden" name="type" value="<%= type %>">
+      <input type="hidden" name="view" value="<%= view %>">
+      <input type="text" name="keyword" class="form-control form-control-sm" placeholder="搜索文件名..." value="<%= keyword %>" style="width:200px;">
+      <button type="submit" class="btn btn-secondary btn-sm">搜索</button>
+    </form>
+    <div class="view-toggle">
+      <a href="?type=<%= type %>&keyword=<%= keyword %>&view=grid" class="view-btn <%= view === 'grid' ? 'active' : '' %>" title="网格视图">⊞</a>
+      <a href="?type=<%= type %>&keyword=<%= keyword %>&view=list" class="view-btn <%= view === 'list' ? 'active' : '' %>" title="列表视图">☰</a>
+    </div>
+  </div>
+</div>
+
+<!-- 上传进度提示 -->
+<div id="uploadProgress" style="display:none;" class="flash flash-success">
+  正在上传... <span id="uploadProgressText"></span>
+</div>
+
+<!-- 统计 -->
+<div style="margin-bottom:12px;color:var(--text-secondary);font-size:14px;">
+  共 <%= total %> 个文件
+  <% if (items.length > 0) { %>，当前显示 <%= items.length %> 个<% } %>
+</div>
+
+<!-- ── 网格视图 ── -->
+<% if (view !== 'list') { %>
+<div class="media-grid" id="mediaGrid" style="min-height: calc(100vh - 400px); align-content: start;">
+  <% if (!items.length) { %>
+  <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-tertiary);">
+    暂无文件，点击「上传文件」开始添加
+  </div>
+  <% } %>
+  <% items.forEach(item => { %>
+  <div class="media-grid-item" data-id="<%= item.id %>" data-url="<%= item.path %>" onclick="openMediaDetail(<%= item.id %>)">
+    <div class="media-grid-check">
+      <input type="checkbox" class="media-check media-check-grid" value="<%= item.id %>" onchange="updateBatchBtn()">
+    </div>
+    <% if (item.isImage) { %>
+    <img src="<%= item.path %>" alt="<%= item.filename %>" class="media-grid-thumb" decoding="async">
+    <% } else { %>
+    <div class="media-grid-icon"><%= getFileIcon(item.fileType) %></div>
+    <% } %>
+    <div class="media-grid-info">
+      <div class="media-grid-name" title="<%= item.filename %>"><%= item.filename %></div>
+      <div class="media-grid-size"><%= item.sizeFormatted %></div>
+    </div>
+
+  </div>
+  <% }) %>
+</div>
+<% } else { %>
+<!-- ── 列表视图 ── -->
+<div class="table-card" style="min-height: calc(100vh - 400px);">
+  <div class="table-card-header" style="display:none;"></div>
+  <div class="table-responsive-wrap">
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th width="40"><input type="checkbox" id="mediaCheckAll" onchange="toggleAll(this)"></th>
+          <th>文件名</th>
+          <th>类型</th>
+          <th>大小</th>
+          <th>上传时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!items.length) { %>
+        <tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);padding:40px;">暂无文件</td></tr>
+        <% } %>
+        <% items.forEach(item => { %>
+        <tr>
+          <td><input type="checkbox" class="media-check media-check-desktop" value="<%= item.id %>" onchange="updateBatchBtn()"></td>
+          <td style="cursor:pointer;" onclick="openMediaDetail(<%= item.id %>)">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <% if (item.isImage) { %>
+              <img src="<%= item.path %>" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;">
+              <% } else { %>
+              <span style="font-size:20px;"><%= getFileIcon(item.fileType) %></span>
+              <% } %>
+              <span style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<%= item.filename %>">
+                <%= item.filename %>
+              </span>
+            </div>
+          </td>
+          <td><span class="badge"><%= item.fileType %></span></td>
+          <td><%= item.sizeFormatted %></td>
+          <td><%= new Date(item.createdAt).toLocaleDateString('zh-CN') %></td>
+          <td>
+            <div class="table-actions">
+              <button class="btn btn-secondary btn-xs" onclick="openMediaDetail(<%= item.id %>)">详情</button>
+              <button class="btn btn-secondary btn-xs" onclick="copyUrl('<%= item.path %>', 'url')">复制URL</button>
+              <button class="btn btn-secondary btn-xs" onclick="copyUrl('<%= item.path %>', 'md')">MD格式</button>
+              <button class="btn btn-danger btn-xs" onclick="deleteFile(<%= item.id %>)">删除</button>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- 移动端卡片列表 -->
+    <div class="mobile-card-list">
+      <% if (!items.length) { %>
+      <div style="text-align:center;padding:40px;color:var(--text-tertiary);">暂无文件</div>
+      <% } %>
+      <% items.forEach(item => { %>
+      <div class="mobile-list-item">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" class="media-check media-check-mobile" value="<%= item.id %>" onchange="updateBatchBtn()">
+          <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;" onclick="openMediaDetail(<%= item.id %>)">
+            <% if (item.isImage) { %>
+            <img src="<%= item.path %>" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+            <% } else { %>
+            <span style="font-size:24px;"><%= getFileIcon(item.fileType) %></span>
+            <% } %>
+            <div style="flex:1;min-width:0;">
+              <div class="mobile-list-item-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><%= item.filename %></div>
+              <div class="mobile-list-item-meta">
+                <span class="badge"><%= item.fileType %></span>
+                <span><%= item.sizeFormatted %></span>
+                <span><%= new Date(item.createdAt).toLocaleDateString('zh-CN') %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mobile-list-item-actions" style="margin-left: 32px;">
+          <button class="btn btn-secondary btn-xs" onclick="copyUrl('<%= item.path %>', 'url')">复制URL</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteFile(<%= item.id %>)">删除</button>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- 分页 -->
+<% if (totalPages > 1) { %>
+<div class="pagination">
+  <% if (page > 1) { %>
+  <a href="?page=<%= page-1 %>&type=<%= type %>&keyword=<%= keyword %>&view=<%= view %>" class="page-btn">‹</a>
+  <% } %>
+  <% for(let p = Math.max(1,page-2); p <= Math.min(totalPages, page+2); p++) { %>
+  <a href="?page=<%= p %>&type=<%= type %>&keyword=<%= keyword %>&view=<%= view %>"
+     class="page-btn <%= p === page ? 'active' : '' %>"><%= p %></a>
+  <% } %>
+  <% if (page < totalPages) { %>
+  <a href="?page=<%= page+1 %>&type=<%= type %>&keyword=<%= keyword %>&view=<%= view %>" class="page-btn">›</a>
+  <% } %>
+</div>
+<% } %>
+
+<script>
+function getFileIcon(type) {
+  const map = { image:'🖼', video:'🎬', audio:'🎵', document:'📄', other:'📦' };
+  return map[type] || '📦';
+}
+
+// 上传
+async function uploadFiles(files) {
+  if (!files.length) return;
+  const progress = document.getElementById('uploadProgress');
+  const text = document.getElementById('uploadProgressText');
+  progress.style.display = 'block';
+  let done = 0;
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    text.textContent = `(${done+1}/${files.length}) ${file.name}`;
+    try {
+      const r = await fetch('/admin/media/upload', { method: 'POST', body: fd });
+      const d = await r.json();
+      if (!d.ok) console.error(d.message);
+    } catch(e) { console.error(e); }
+    done++;
+  }
+  progress.style.display = 'none';
+  location.reload();
+}
+
+// 删除单个
+async function deleteFile(id) {
+  if (!confirm('确认删除该文件？')) return;
+  const r = await fetch('/admin/media/' + id, { method: 'DELETE' });
+  const d = await r.json();
+  if (d.ok) location.reload();
+  else alert('删除失败：' + d.message);
+}
+
+// 详情
+async function openMediaDetail(id) {
+  // 阻止在网格视图中点击复选框时触发详情
+  if (event && (event.target.closest('.media-grid-check') || event.target.closest('.media-check'))) return;
+  const r = await fetch('/admin/media/detail/' + id);
+  const d = await r.json();
+  if (!d.ok) return;
+  const item = d.item;
+  const modal = document.getElementById('mediaDetailModal');
+  document.getElementById('mdPreview').innerHTML = item.fileType === 'image' ? '<img src="'+item.path+'" style="max-width:100%;border-radius:10px;border:1px solid var(--surface-border);">' : '<div style="font-size:40px;text-align:center;padding:20px;">'+getFileIcon(item.fileType)+'</div>';
+  document.getElementById('mdFilename').textContent = item.filename;
+  document.getElementById('mdType').textContent = item.fileType;
+  document.getElementById('mdSize').textContent = item.sizeFormatted;
+  document.getElementById('mdTime').textContent = new Date(item.createdAt).toLocaleString();
+  document.getElementById('mdUrl').value = item.path;
+  document.getElementById('mdHtml').value = `<img src="${item.path}" alt="">`;
+  document.getElementById('mdMd').value = `![](${item.path})`;
+  document.getElementById('mdDeleteBtn').onclick = () => { deleteFile(item.id); };
+  modal.style.display = 'flex';
+}
+function copyFrom(elId){ const el=document.getElementById(elId); el.select(); document.execCommand('copy'); showToast('已复制'); }
+
+// 批量删除
+function getActiveChecks() {
+  const isListView = '<%= view %>' === 'list';
+  if (!isListView) return document.querySelectorAll('.media-check-grid');
+  if (window.matchMedia('(max-width: 639px)').matches) return document.querySelectorAll('.media-check-mobile');
+  return document.querySelectorAll('.media-check-desktop');
+}
+function updateSelectAllState() {
+  const allCb = document.getElementById('mediaCheckAll');
+  if (!allCb) return;
+  const isListView = '<%= view %>' === 'list';
+  if (!isListView || window.matchMedia('(max-width: 639px)').matches) {
+    allCb.checked = false;
+    allCb.indeterminate = false;
+    return;
+  }
+  const checks = document.querySelectorAll('.media-check-desktop');
+  const checked = document.querySelectorAll('.media-check-desktop:checked');
+  allCb.checked = checks.length > 0 && checked.length === checks.length;
+  allCb.indeterminate = checked.length > 0 && checked.length < checks.length;
+}
+function updateBatchBtn() {
+  const checked = [...getActiveChecks()].filter(c => c.checked);
+  const btn = document.getElementById('batchDeleteBtn');
+  btn.style.display = checked.length ? 'inline-flex' : 'none';
+  btn.textContent = `🗑 删除 (${checked.length})`;
+  updateSelectAllState();
+}
+function toggleAll(cb) {
+  getActiveChecks().forEach(c => { c.checked = cb.checked; });
+  updateBatchBtn();
+}
+async function batchDelete() {
+  const ids = [...new Set([...getActiveChecks()].filter(c => c.checked).map(c => c.value))];
+  if (!ids.length) return;
+  if (!confirm(`确认删除选中的 ${ids.length} 个文件？`)) return;
+  const r = await fetch('/admin/media/batch-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+  const d = await r.json();
+  if (d.ok) location.reload();
+  else alert('批量删除失败');
+}
+
+// 同步本地
+async function syncFiles() {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '同步中...';
+  const r = await fetch('/admin/media/sync', { method: 'POST' });
+  const d = await r.json();
+  btn.disabled = false; btn.textContent = '🔄 同步本地';
+  if (d.ok) {
+    showToast(`同步完成，新增 ${d.synced} 个文件`);
+    if (d.synced > 0) setTimeout(() => location.reload(), 1500);
+  } else {
+    showToast('同步失败', 'error');
+  }
+}
+
+// 复制 URL
+function copyUrl(url, format) {
+  let text = url;
+  if (format === 'md') text = `![](${url})`;
+  if (format === 'html') text = `<img src="${url}" alt="">`;
+  navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板'));
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+window.addEventListener('resize', updateBatchBtn);
+document.addEventListener('DOMContentLoaded', updateBatchBtn);
+</script>
+
+<style>
+@keyframes drawer-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.drawer-modal {
+  margin: 16px !important;
+  border-radius: 24px !important;
+  height: auto !important;
+  max-height: calc(100vh - 32px) !important;
+  width: 440px !important;
+  max-width: calc(100% - 32px) !important;
+  animation: drawer-slide-in 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both !important;
+  border: 1px solid var(--surface-border) !important;
+  box-shadow: var(--surface-shadow-2) !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .drawer-modal {
+    width: 100% !important;
+    margin: 12px !important;
+    max-width: calc(100% - 24px) !important;
+    border-radius: 20px !important;
+  }
+  .modal-overlay {
+    justify-content: center !important;
+    align-items: flex-end !important;
+  }
+}
+.drawer-modal .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+#mdPreview img {
+  max-height: 260px;
+  object-fit: contain;
+}
+</style>
+
+<!-- 详情弹窗 (右侧抽屉) -->
+<div class="modal-overlay" id="mediaDetailModal" style="display:none; justify-content: flex-end; align-items: center; padding: 0;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-box drawer-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">附件详情</h3>
+      <button class="modal-close" onclick="document.getElementById('mediaDetailModal').style.display='none'">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="mdPreview" style="margin-bottom:16px; text-align:center;"></div>
+      <div class="form-grid" style="margin-bottom:16px; grid-template-columns: 1fr;">
+        <div class="form-group" style="margin-bottom:8px;"><label class="form-label" style="display:inline-block;width:60px;">文件名</label><span id="mdFilename" class="text-secondary" style="font-weight:600;word-break:break-all;"></span></div>
+        <div class="form-group" style="margin-bottom:8px;"><label class="form-label" style="display:inline-block;width:60px;">类型</label><span id="mdType" class="badge"></span></div>
+        <div class="form-group" style="margin-bottom:8px;"><label class="form-label" style="display:inline-block;width:60px;">大小</label><span id="mdSize" class="text-tertiary"></span></div>
+        <div class="form-group" style="margin-bottom:8px;"><label class="form-label" style="display:inline-block;width:60px;">时间</label><span id="mdTime" class="text-tertiary"></span></div>
+      </div>
+      <div class="form-group"><label class="form-label">URL 链接</label><div style="display:flex;gap:6px;"><input id="mdUrl" class="form-control form-control-sm" readonly><button class="btn btn-secondary btn-sm" onclick="copyFrom('mdUrl')">复制</button></div></div>
+      <div class="form-group"><label class="form-label">HTML 标签</label><div style="display:flex;gap:6px;"><input id="mdHtml" class="form-control form-control-sm" readonly><button class="btn btn-secondary btn-sm" onclick="copyFrom('mdHtml')">复制</button></div></div>
+      <div class="form-group"><label class="form-label">Markdown</label><div style="display:flex;gap:6px;"><input id="mdMd" class="form-control form-control-sm" readonly><button class="btn btn-secondary btn-sm" onclick="copyFrom('mdMd')">复制</button></div></div>
+    </div>
+    <div class="modal-footer" style="display:flex; gap:10px;">
+      <button class="btn btn-danger" id="mdDeleteBtn" style="flex:1;justify-content:center;">🗑 删除附件</button>
+      <button class="btn btn-primary" onclick="document.getElementById('mediaDetailModal').style.display='none'" style="flex:1;justify-content:center;">完成关闭</button>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/layout-foot') %>

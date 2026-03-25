@@ -1,0 +1,159 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<main class="page-container animate-fade-in-up">
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="/">🏠 首页</a>
+    <span class="breadcrumb-sep">›</span>
+    <% if (article.category) { %>
+    <a href="/category/<%= article.category.slug %>"><%= article.category.name %></a>
+    <span class="breadcrumb-sep">›</span>
+    <% } %>
+    <span style="color:var(--text-secondary);"><%= article.title %></span>
+  </div>
+
+  <div class="article-layout">
+    <!-- Main content -->
+    <div style="min-width:0;">
+      <div class="article-detail-card">
+        <% if (article.cover) { %>
+        <img src="<%= article.cover %>" class="article-detail-cover" alt="<%= article.title %>">
+        <% } else { %>
+        <div class="article-detail-cover article-cover-placeholder" style="background:linear-gradient(135deg,var(--accent),var(--accent-light));display:flex;align-items:center;justify-content:center;font-size:60px;">📝</div>
+        <% } %>
+        <div class="article-detail-body" style="padding:var(--space-xl);">
+          <!-- Badges -->
+          <div class="article-header-tags" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+            <% if (article.pinned) { %><span class="badge-pinned">📌 置顶</span><% } %>
+            <% if (article.category) { %>
+            <a href="/category/<%= article.category.slug %>" class="badge badge-accent"><%= article.category.name %></a>
+            <% } %>
+            <% if (article.tags) { article.tags.forEach(tag => { %>
+            <a href="/tag/<%= tag.slug %>" class="badge badge-blue"><%= tag.name %></a>
+            <% }) } %>
+          </div>
+
+          <h1 class="article-detail-title"><%= article.title %></h1>
+
+          <!-- Meta -->
+          <div class="article-detail-meta">
+            <span>✍️ <%= article.author ? article.author.nickname : '博主' %></span>
+            <span>📅 <%= new Date(article.publishedAt).toLocaleDateString('zh-CN') %></span>
+            <span>👁️ <%= totalViews %> 次阅读</span>
+          </div>
+
+          <!-- Content -->
+          <div class="prose article-prose" id="articleContent">
+            <%- contentHtml %>
+          </div>
+
+          <!-- Tags -->
+          <% if (article.tags && article.tags.length) { %>
+          <div class="article-tags">
+            <span style="font-size:13px;color:var(--text-tertiary);margin-right:4px;">🏷️</span>
+            <% article.tags.forEach(tag => { %>
+            <a href="/tag/<%= tag.slug %>" class="badge-tag"># <%= tag.name %></a>
+            <% }) %>
+          </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Prev / Next -->
+      <div class="article-nav">
+        <div>
+          <% if (prevArticle) { %>
+          <a href="/article/<%= prevArticle.slug %>" class="article-nav-card">
+            <span class="article-nav-label">‹ 上一篇</span>
+            <span class="article-nav-title"><%= prevArticle.title %></span>
+          </a>
+          <% } %>
+        </div>
+        <div>
+          <% if (nextArticle) { %>
+          <a href="/article/<%= nextArticle.slug %>" class="article-nav-card right">
+            <span class="article-nav-label">下一篇 ›</span>
+            <span class="article-nav-title"><%= nextArticle.title %></span>
+          </a>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar: TOC + other -->
+    <aside class="article-aside-sticky">
+      <!-- Table of contents (auto-generate from headings) -->
+      <div class="toc-card" id="toc" style="display:none;">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--surface-border);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-tertiary);">目录</div>
+        <div id="tocList" style="padding:8px;max-height:60vh;overflow-y:auto;font-size:13px;"></div>
+      </div>
+
+      <!-- Back to top -->
+      <div style="margin-top:16px;text-align:center;">
+        <button onclick="window.scrollTo({top:0,behavior:'smooth'})"
+          style="width:100%;padding:10px;border-radius:14px;background:var(--surface-3-bg);border:1px solid var(--surface-border);color:var(--text-secondary);cursor:pointer;font-size:13px;font-weight:500;transition:background 0.15s;"
+          onmouseover="this.style.background='var(--accent-tint)';this.style.color='var(--accent)'"
+          onmouseout="this.style.background='var(--surface-3-bg)';this.style.color='var(--text-secondary)'">
+          ⬆️ 回到顶部
+        </button>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script>
+// ── TOC 目录自动生成 + 高亮跟随滚动 ──
+(function() {
+  const content = document.getElementById('articleContent');
+  const tocList = document.getElementById('tocList');
+  const toc = document.getElementById('toc');
+  if (!content || !tocList) return;
+  const headings = content.querySelectorAll('h2, h3, h4');
+  if (headings.length < 2) return;
+
+  toc.style.display = '';
+  const anchors = [];
+  headings.forEach((h, i) => {
+    const id = 'h-' + i;
+    h.id = id;
+    const a = document.createElement('a');
+    a.href = '#' + id;
+    a.textContent = h.textContent;
+    a.dataset.id = id;
+    const indent = h.tagName === 'H2' ? 0 : h.tagName === 'H3' ? 14 : 28;
+    a.style.cssText = `display:block;padding:5px 10px 5px ${10+indent}px;border-radius:8px;color:var(--text-secondary);text-decoration:none;font-size:${h.tagName === 'H2' ? '13px' : '12px'};transition:all 0.15s;${h.tagName === 'H2' ? 'font-weight:500;' : ''}`;
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    tocList.appendChild(a);
+    anchors.push({ id, el: h, a });
+  });
+
+  // IntersectionObserver 高亮当前章节
+  let activeId = null;
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        if (activeId !== id) {
+          anchors.forEach(({ id: aid, a }) => {
+            if (aid === id) {
+              a.style.background = 'var(--accent-tint)';
+              a.style.color = 'var(--accent)';
+            } else {
+              a.style.background = '';
+              a.style.color = 'var(--text-secondary)';
+            }
+          });
+          activeId = id;
+        }
+      }
+    });
+  }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+  headings.forEach(h => observer.observe(h));
+})();
+</script>
+
+<%- include('partials/footer') %>

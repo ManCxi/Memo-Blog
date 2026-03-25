@@ -1,0 +1,67 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<main class="page-container animate-fade-in-up">
+  <div class="archive-modern-shell">
+    <div class="archive-hero-card">
+      <div class="archive-hero-head">
+        <div class="archive-hero-emoji">🔍</div>
+        <h1 class="archive-hero-title">搜索结果</h1>
+      </div>
+      <p class="archive-hero-sub">
+        关键词「<strong style="color:var(--accent)"><%= keyword %></strong>」· 共找到 <strong><%= total %></strong> 篇文章
+      </p>
+      <form class="archive-search" action="/search" method="get">
+        <input class="search-input" type="text" name="q" placeholder="搜索文章…" value="<%= keyword || '' %>">
+        <button class="search-btn" type="submit">搜索</button>
+      </form>
+    </div>
+
+    <% if (!articles || articles.length === 0) { %>
+      <div class="archive-match-empty">
+        <div style="font-size:3rem;margin-bottom:16px;opacity:0.5;">🔍</div>
+        没有找到与「<%= keyword %>」相关的文章
+      </div>
+    <% } else { %>
+      <%
+        const yearGroups = {};
+        articles.forEach(a => {
+          const y = new Date(a.createdAt).getFullYear();
+          if (!yearGroups[y]) yearGroups[y] = [];
+          yearGroups[y].push(a);
+        });
+        const years = Object.keys(yearGroups).sort((a, b) => b - a);
+      %>
+
+      <% years.forEach(year => { %>
+        <section class="archive-year-row">
+          <div class="archive-year-chip"><%= year %></div>
+          <div class="archive-year-list">
+            <% yearGroups[year].forEach(article => { %>
+            <a href="/article/<%= article.slug %>" class="archive-item">
+              <span class="archive-item-date"><%= new Date(article.createdAt).toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit' }).replace(/\//g, '/') %></span>
+              <span class="archive-item-dot"></span>
+              <span class="archive-item-title"><%= article.title %></span>
+              <% if (article.category) { %>
+              <span class="archive-item-cat"><%= article.category.name %></span>
+              <% } %>
+            </a>
+            <% }) %>
+          </div>
+        </section>
+      <% }) %>
+    <% } %>
+
+    <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+      <div class="pagination archive-match-pagination">
+        <a href="?q=<%= encodeURIComponent(keyword) %>&page=<%= currentPage - 1 %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">‹</a>
+        <% for (let i = 1; i <= totalPages; i++) { %>
+        <a href="?q=<%= encodeURIComponent(keyword) %>&page=<%= i %>" class="page-btn <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+        <% } %>
+        <a href="?q=<%= encodeURIComponent(keyword) %>&page=<%= currentPage + 1 %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">›</a>
+      </div>
+    <% } %>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

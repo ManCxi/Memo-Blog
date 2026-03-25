@@ -1,0 +1,69 @@
+<% const activePage = 'settings-links' %>
+<%- include('../partials/layout-head') %>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px;">
+  <h1 class="page-title" style="margin: 0;">友情链接</h1>
+  <button type="button" class="btn btn-primary" onclick="addFriendLink()" style="border-radius: 99px; padding: 6px 16px; font-size: 13px;">
+    + 添加友链
+  </button>
+</div>
+
+<div id="friendLinkList" class="settings-group" style="max-width: 1000px;"></div>
+
+<div style="margin-bottom: 24px; max-width: 1000px;">
+  <button type="button" class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="saveFriendLinks()">保存友链设置</button>
+</div>
+<script>
+const friendLinks = <%- JSON.stringify(settings.friend_links || []) %>;
+function renderFriendLinks(){
+  const list = document.getElementById('friendLinkList');
+  if (!friendLinks.length) { list.innerHTML = '<div class="settings-row"><div class="settings-label" style="width: 100%; text-align: center; justify-content: center; color: var(--text-tertiary); font-weight: 400; padding: 20px 0;">暂无友链，点击右上角「添加」创建</div></div>'; return; }
+  list.innerHTML = friendLinks.map((link,i)=>`
+    <div class="settings-row-col" style="padding-bottom: 20px;">
+      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--text-secondary);">友链 #${i + 1}</span>
+        <button type="button" class="btn btn-danger btn-sm" style="padding: 4px 10px; font-size: 12px; border-radius: 8px;" onclick="removeFriendLink(${i})">删除</button>
+      </div>
+      <div class="form-grid" style="gap: 12px;">
+        <div style="grid-column: 1/-1;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">站点名称</label>
+          <input type="text" class="form-control" value="${escHtml(link.name||'')}" placeholder="某某的博客" onchange="friendLinks[${i}].name=this.value">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">站点 URL</label>
+          <input type="url" class="form-control" value="${escHtml(link.url||'')}" placeholder="https://" onchange="friendLinks[${i}].url=this.value">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">头像 URL</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="linkAvatar${i}" class="form-control" value="${escHtml(link.avatar||'')}" placeholder="https://" onchange="friendLinks[${i}].avatar=this.value">
+            <button type="button" class="btn btn-secondary" style="border-radius: 12px; white-space: nowrap;" onclick="openLinkMediaPicker(${i})">选图</button>
+          </div>
+        </div>
+        <div style="grid-column: 1/-1;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">描述</label>
+          <input type="text" class="form-control" value="${escHtml(link.description||'')}" placeholder="一句话介绍..." onchange="friendLinks[${i}].description=this.value">
+        </div>
+      </div>
+    </div>`).join('');
+}
+function addFriendLink(){ friendLinks.push({ name:'', url:'', avatar:'', description:'' }); renderFriendLinks(); }
+function removeFriendLink(i){ friendLinks.splice(i,1); renderFriendLinks(); }
+async function saveFriendLinks(){
+  const resp = await fetch('/admin/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ friend_links: friendLinks }) });
+  const data = await resp.json(); showToast(data.ok?'已保存':'保存失败', data.ok?'success':'error');
+}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function openLinkMediaPicker(index) {
+  openAttachmentPicker((url) => {
+    const input = document.getElementById('linkAvatar' + index);
+    if (input) input.value = url;
+    if (friendLinks[index]) {
+      friendLinks[index].avatar = url;
+    }
+  }, { accept: 'image' });
+}
+
+renderFriendLinks();
+</script>
+<%- include('../partials/layout-foot') %>

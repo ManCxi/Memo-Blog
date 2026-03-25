@@ -1,0 +1,298 @@
+<button class="scroll-top-btn" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
+  title="回到顶部">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <!-- Brand -->
+      <div class="footer-brand">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <% if (settings && settings.site_logo) { %>
+            <img src="<%= settings.site_logo %>" alt="Logo"
+              style="width:32px;height:32px;border-radius:9px;object-fit:cover;">
+            <% } else { %>
+              <a href="/"
+                style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-light));color:#fff;font-weight:800;font-size:14px;flex-shrink:0;">
+                <%= siteTitle[0] || 'B' %>
+              </a>
+              <% } %>
+                <span class="footer-brand-name">
+                  <%= siteTitle %>
+                </span>
+        </div>
+        <p class="footer-brand-desc">
+          <%= siteDescription %>
+        </p>
+
+        <!-- 运行时长 -->
+        <div class="footer-run-time">
+          <span class="footer-run-dot"></span>
+          <span>博客运行中</span>
+          <span class="footer-run-badge" id="runTime">--</span>
+        </div>
+
+        <!-- 社交链接 -->
+        <% const bloggerInfo=(settings && settings.blogger_info) ? settings.blogger_info : {}; %>
+        <% if (bloggerInfo.github || bloggerInfo.qq) { %>
+          <div class="footer-social">
+            <% if (bloggerInfo.github) { %>
+              <a href="<%= bloggerInfo.github %>" target="_blank" rel="noopener" class="footer-social-link"
+                title="GitHub">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" />
+                </svg>
+              </a>
+            <% } %>
+            <% if (bloggerInfo.qq) { %>
+              <a href="http://wpa.qq.com/msgrd?v=3&uin=<%= bloggerInfo.qq %>&site=qq&menu=yes" target="_blank" rel="noopener" class="footer-social-link"
+                title="QQ">
+                <svg width="18" height="18" viewBox="0 0 1024 1024" fill="currentColor">
+                  <path d="M824.8 613.2c-16-51.4-34.4-94.6-62.7-165.3C766.5 262.2 689.3 112 511.5 112 331.7 112 256.2 265.2 261 447.9c-28.4 70.8-46.7 113.7-62.7 165.3-34 109.5-23 154.8-14.6 155.8 18 2.2 70.1-82.4 70.1-82.4 0 49 25.2 112.9 79.8 159-26.4 8.1-85.7 29.9-71.6 53.8 11.4 19.3 196.2 12.3 249.5 6.3 53.3 6 238.1 13 249.5-6.3 14.1-23.8-45.3-45.7-71.6-53.8 54.6-46.2 79.8-110.1 79.8-159 0 0 52.1 84.6 70.1 82.4 8.5-1.1 19.5-46.4-14.5-155.8z"/>
+                </svg>
+              </a>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Nav links -->
+      <div class="footer-links-grid">
+        <div class="footer-links-col">
+          <h4>快速导航</h4>
+          <a href="/">🏠 首页</a>
+          <a href="/archive">📚 文章归档</a>
+          <a href="/category/all">🗂️ 分类浏览</a>
+          <a href="/links">🔗 友情链接</a>
+        </div>
+        <div class="footer-links-col">
+          <h4>更多</h4>
+          <% const emailAddr=(bloggerInfo && bloggerInfo.email) || (settings && settings.contact_email)
+            || 'admin@example.com' ; %>
+            <% if (bloggerInfo && bloggerInfo.github) { %>
+              <a href="<%= bloggerInfo.github %>" target="_blank" rel="noopener">🐙 GitHub</a>
+              <% } %>
+                <a href="mailto:<%= emailAddr %>">✉️ 邮件联系</a>
+                <a href="/rss.xml" target="_blank">📡 RSS 订阅</a>
+                <a href="/sitemap.xml" target="_blank">🗺️ 站点地图</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="footer-bottom">
+      <p class="footer-copyright">
+        <% if (settings && settings.copyright) { %>
+          <%= settings.copyright %>
+            <% } else { %>
+              © <%= new Date().getFullYear() %>
+                <%= siteTitle %> · Powered by Node.js
+                  <% } %>
+                    <% const icpStr=(settings && settings.icp) || process.env.SITE_ICP || '浙ICP备2024000000号-1' ; %>
+                      · <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener"
+                        style="color:inherit;opacity:0.7;">
+                        <%= icpStr %>
+                      </a>
+      </p>
+      <span class="footer-powered">Powered by Memo</span>
+    </div>
+  </div>
+</footer>
+
+<!-- JS Libs (本地) -->
+<script src="/libs/marked/marked.min.js" defer></script>
+<script src="/libs/dompurify/purify.min.js" defer></script>
+<script src="/libs/highlightjs/highlight.min.js" defer></script>
+<script src="/libs/mermaid/mermaid.min.js" defer></script>
+<script src="/libs/katex/katex.min.js" defer></script>
+<script src="/libs/katex/contrib/auto-render.min.js" defer></script>
+<script>
+  // 文章详情：代码块 mac 风格顶栏 + 复制 / 折叠（须在 Mermaid 改写 DOM 之后执行）
+  function initArticleCodeCopy() {
+    var root = document.getElementById('articleContent');
+    if (!root) return;
+    root.querySelectorAll('pre').forEach(function (pre) {
+      if (pre.closest('.code-block-wrapper')) return;
+
+      var codeEl = pre.querySelector('code');
+      var lang = '代码';
+      if (codeEl && codeEl.className) {
+        var lm = codeEl.className.match(/language-([\w+-]+)/);
+        if (lm) lang = lm[1];
+      }
+
+      var wrap = document.createElement('div');
+      wrap.className = 'code-block-wrapper';
+      var chrome = document.createElement('div');
+      chrome.className = 'code-block-chrome';
+      var dots = document.createElement('div');
+      dots.className = 'code-chrome-dots';
+      dots.setAttribute('aria-hidden', 'true');
+      ['red', 'yellow', 'green'].forEach(function (c) {
+        var d = document.createElement('span');
+        d.className = 'code-chrome-dot code-chrome-dot--' + c;
+        dots.appendChild(d);
+      });
+      var spacer = document.createElement('div');
+      spacer.className = 'code-chrome-spacer';
+      var right = document.createElement('div');
+      right.className = 'code-chrome-right';
+
+      var langSpan = document.createElement('span');
+      langSpan.className = 'code-chrome-lang';
+      langSpan.textContent = lang;
+
+      var copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'code-copy-btn';
+      copyBtn.textContent = '复制代码';
+      copyBtn.setAttribute('aria-label', '复制代码');
+
+      var collapseBtn = document.createElement('button');
+      collapseBtn.type = 'button';
+      collapseBtn.className = 'code-collapse-btn';
+      collapseBtn.setAttribute('aria-label', '展开或折叠代码');
+      collapseBtn.setAttribute('aria-expanded', 'true');
+      collapseBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+
+      var body = document.createElement('div');
+      body.className = 'code-block-body';
+
+      copyBtn.addEventListener('click', function () {
+        var text = (codeEl || pre).innerText.replace(/\n$/, '');
+        function fallbackCopy(str) {
+          var ta = document.createElement('textarea');
+          ta.value = str;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand('copy');
+            return true;
+          } catch (e) {
+            return false;
+          } finally {
+            document.body.removeChild(ta);
+          }
+        }
+        function flash(ok) {
+          copyBtn.textContent = ok ? '已复制' : '复制失败';
+          clearTimeout(copyBtn._copyT);
+          copyBtn._copyT = setTimeout(function () { copyBtn.textContent = '复制代码'; }, 2000);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { flash(true); }).catch(function () {
+            flash(fallbackCopy(text));
+          });
+        } else {
+          flash(fallbackCopy(text));
+        }
+      });
+
+      collapseBtn.addEventListener('click', function () {
+        var collapsed = wrap.classList.toggle('is-collapsed');
+        collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      });
+
+      right.appendChild(langSpan);
+      right.appendChild(copyBtn);
+      right.appendChild(collapseBtn);
+      chrome.appendChild(dots);
+      chrome.appendChild(spacer);
+      chrome.appendChild(right);
+
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(chrome);
+      wrap.appendChild(body);
+      body.appendChild(pre);
+    });
+  }
+
+  // 代码高亮
+  if (window.hljs) {
+    document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+  }
+
+  // KaTeX 数学公式
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
+  }
+
+  // Mermaid 图表
+  if (window.mermaid) {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
+    mermaid.initialize({ startOnLoad: false, theme });
+    document.querySelectorAll('code.language-mermaid').forEach(el => {
+      const pre = el.parentElement;
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = el.textContent;
+      pre.replaceWith(div);
+    });
+    const runResult = mermaid.run();
+    const afterMermaid = () => initArticleCodeCopy();
+    if (runResult && typeof runResult.then === 'function') {
+      runResult.then(afterMermaid).catch(afterMermaid);
+    } else {
+      afterMermaid();
+    }
+  } else {
+    initArticleCodeCopy();
+  }
+
+  // 运行时间
+  (function () {
+    const runSince = '<%= (settings && settings.run_since) ? settings.run_since : new Date().getFullYear() + "-01-01" %>';
+    const start = new Date(runSince).getTime();
+    function update() {
+      const s = Math.floor((Date.now() - start) / 1000);
+      if (s < 0) return;
+      const d = Math.floor(s / 86400);
+      const h = String(Math.floor((s % 86400) / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const sec = String(s % 60).padStart(2, '0');
+      const el = document.getElementById('runTime');
+      if (el) el.textContent = d + ' 天 ' + h + ':' + m + ':' + sec;
+    }
+    update(); setInterval(update, 1000);
+  })();
+
+  // 回到顶部按钮
+  (function () {
+    const btn = document.getElementById('scrollTopBtn');
+    if (!btn) return;
+    function update() {
+      btn.classList.toggle('visible', window.scrollY > 400);
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  })();
+
+  // 暗黑模式切换
+  function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme') || 'light';
+    const next = current === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    // 切换代码高亮主题
+    const link = document.getElementById('hlTheme');
+    if (link) link.href = next === 'dark'
+      ? '/libs/highlightjs/styles/atom-one-dark.min.css'
+      : '/libs/highlightjs/styles/atom-one-light.min.css';
+    // 更新切换按钮图标
+    document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+      btn.textContent = next === 'dark' ? '☀️' : '🌙';
+    });
+  }
+</script>
+</body>
+
+</html>

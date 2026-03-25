@@ -1,0 +1,88 @@
+<% const activePage = 'settings-nav' %>
+<%- include('../partials/layout-head') %>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px;">
+  <h1 class="page-title" style="margin: 0;">导航菜单</h1>
+  <button type="button" class="btn btn-primary" onclick="addNavMenu()" style="border-radius: 99px; padding: 6px 16px; font-size: 13px;">
+    + 添加菜单项
+  </button>
+</div>
+
+<div id="navMenuList" class="settings-group" style="max-width: 1000px;"></div>
+
+<div style="margin-bottom: 24px; max-width: 1000px;">
+  <button type="button" class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="saveNavMenus()">保存导航设置</button>
+</div>
+<div style="color:var(--text-tertiary);font-size:13px; text-align: center; max-width: 1000px; margin-bottom: 30px;">支持拖拽排序栏目，以及一键绑定已有分类</div>
+
+<script src="/libs/sortablejs/Sortable.min.js"></script>
+<script>
+const navMenus = <%- JSON.stringify(settings.nav_menus || []) %>;
+const categories = <%- JSON.stringify(typeof categories !== "undefined" ? categories : []) %>;
+const pages = <%- JSON.stringify(typeof pages !== "undefined" ? pages : []) %>;
+let sortableInstance = null;
+function renderNavMenus() {
+  const list = document.getElementById('navMenuList');
+  if (!navMenus.length) {
+    list.innerHTML = '<div class="settings-row"><div class="settings-label" style="width: 100%; text-align: center; justify-content: center; color: var(--text-tertiary); font-weight: 400; padding: 20px 0;">暂无菜单项，点击右上角「添加」创建</div></div>';
+    if(sortableInstance) sortableInstance.destroy();
+    return;
+  }
+
+  const catOptions = `<option value="">-- 从已有分类或页面填充 --</option>` +
+    categories.map(c => `<option value="${c.slug}" data-name="${c.name}" data-type="category">📁 分类: ${c.name}</option>`).join('') +
+    pages.map(p => `<option value="${p.slug}" data-name="${p.title}" data-type="page">📄 页面: ${p.title}</option>`).join('');
+
+  list.innerHTML = navMenus.map((item, i) => `
+    <div class="settings-row-col nav-item-row" data-idx="${i}" style="transition: all 0.2s;">
+      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--text-secondary); display:flex; align-items:center; gap:8px;">
+          <span class="drag-handle" style="cursor: grab; color: var(--text-tertiary); font-size: 16px;">☰</span>
+          菜单项 #${i + 1}
+        </span>
+        <button type="button" class="btn btn-danger btn-sm" style="padding: 4px 10px; font-size: 12px; border-radius: 8px;" onclick="removeNavMenu(${i})">删除</button>
+      </div>
+      <div class="form-grid" style="gap: 12px;">
+        <div style="grid-column: 1/-1; display:flex; gap:8px;">
+          <select class="form-control" style="width:auto;" onchange="selectCategory(${i}, this)">
+            ${catOptions}
+          </select>
+          <span style="color:var(--text-tertiary); font-size:12px; display:flex; align-items:center;">一键绑定已有分类或页面</span>
+        </div>
+        <input type="text" class="form-control" value="${escHtml(item.label||'')}" placeholder="菜单名称" onchange="navMenus[${i}].label=this.value">
+        <input type="text" class="form-control" value="${escHtml(item.url||'')}" placeholder="/path 或 https://" onchange="navMenus[${i}].url=this.value">
+      </div>
+    </div>`).join('');
+
+  if (sortableInstance) sortableInstance.destroy();
+  sortableInstance = new Sortable(list, {
+    handle: '.drag-handle',
+    animation: 200,
+    ghostClass: 'settings-row-col-ghost',
+    onEnd: function(evt) {
+      const movedItem = navMenus.splice(evt.oldIndex, 1)[0];
+      navMenus.splice(evt.newIndex, 0, movedItem);
+      renderNavMenus();
+    }
+  });
+}
+
+function selectCategory(index, selectEl) {
+  const slug = selectEl.value;
+  if (!slug) return;
+  const name = selectEl.options[selectEl.selectedIndex].getAttribute('data-name');
+  const type = selectEl.options[selectEl.selectedIndex].getAttribute('data-type');
+  navMenus[index].label = name;
+  navMenus[index].url = type === 'category' ? ('/category/' + slug) : ('/p/' + slug);
+  renderNavMenus();
+}
+function addNavMenu(){ navMenus.push({ id: Date.now().toString(), label:'', url:'', children:[] }); renderNavMenus(); }
+function removeNavMenu(i){ navMenus.splice(i,1); renderNavMenus(); }
+async function saveNavMenus(){
+  const resp = await fetch('/admin/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nav_menus: navMenus }) });
+  const data = await resp.json();
+  showToast(data.ok ? '已保存' : '保存失败', data.ok ? 'success' : 'error');
+}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+renderNavMenus();
+</script>
+<%- include('../partials/layout-foot') %>

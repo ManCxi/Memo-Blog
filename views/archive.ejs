@@ -1,0 +1,72 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<main class="page-container animate-fade-in-up">
+  <%
+    const demoArticles = [
+      { slug:'iptables-best', title:'iptables 实战指南：从思路到产出规则的配置', createdAt:new Date('2026-01-20'), category:{ name:'Linux教程', slug:'linux' } },
+      { slug:'linux-perm', title:'Linux 权限模型全解', createdAt:new Date('2026-01-17'), category:{ name:'Linux教程', slug:'linux' } },
+      { slug:'iptables-intro', title:'iptables 入门到进阶：18 条命令掌控 Linux 防火墙', createdAt:new Date('2026-01-12'), category:{ name:'Linux教程', slug:'linux' } },
+      { slug:'linux-lvm', title:'Linux LVM 磁盘管理详解', createdAt:new Date('2026-01-03'), category:{ name:'Linux教程', slug:'linux' } }
+    ];
+    const list = (Array.isArray(articles) && articles.length) ? articles : demoArticles;
+    const totalDisplay = (Array.isArray(articles) && articles.length) ? total : list.length;
+  %>
+  <div class="archive-modern-shell">
+    <div class="archive-hero-card">
+      <div class="archive-hero-head">
+        <div class="archive-hero-emoji">📚</div>
+        <h1 class="archive-hero-title">文章归档</h1>
+      </div>
+      <p class="archive-hero-sub">共收录 <strong><%= totalDisplay %></strong> 篇文章</p>
+      <form class="archive-search" action="/archive" method="get">
+        <input class="search-input" type="text" name="search" placeholder="按标题搜索…" value="<%= keyword || '' %>">
+        <button class="search-btn" type="submit">搜索</button>
+      </form>
+    </div>
+
+    <% if (!list.length) { %>
+      <div class="archive-match-empty">暂无文章</div>
+    <% } else { %>
+    <%
+      const yearGroups = {};
+      list.forEach(a => {
+        const y = new Date(a.publishedAt).getFullYear();
+        if (!yearGroups[y]) yearGroups[y] = [];
+        yearGroups[y].push(a);
+      });
+      const years = Object.keys(yearGroups).sort((a, b) => b - a);
+    %>
+
+    <% years.forEach(year => { %>
+      <section class="archive-year-row">
+        <div class="archive-year-chip"><%= year %></div>
+        <div class="archive-year-list">
+          <% yearGroups[year].forEach(article => { %>
+          <a href="/article/<%= article.slug %>" class="archive-item">
+            <span class="archive-item-date"><%= new Date(article.publishedAt).toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit' }).replace(/\//g, '/') %></span>
+            <span class="archive-item-dot"></span>
+            <span class="archive-item-title"><%= article.title %></span>
+            <% if (article.category) { %>
+            <span class="archive-item-cat"><%= article.category.name %></span>
+            <% } %>
+          </a>
+          <% }) %>
+        </div>
+      </section>
+    <% }) %>
+    <% } %>
+
+    <% if ((Array.isArray(articles) && articles.length) && totalPages > 1) { %>
+      <div class="pagination archive-match-pagination">
+        <a href="?page=<%= currentPage-1 %><%= keyword ? '&search=' + encodeURIComponent(keyword) : '' %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">‹</a>
+        <% for (let i = 1; i <= totalPages; i++) { %>
+        <a href="?page=<%= i %><%= keyword ? '&search=' + encodeURIComponent(keyword) : '' %>" class="page-btn <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+        <% } %>
+        <a href="?page=<%= currentPage+1 %><%= keyword ? '&search=' + encodeURIComponent(keyword) : '' %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">›</a>
+      </div>
+    <% } %>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

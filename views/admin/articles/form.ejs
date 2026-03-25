@@ -1,0 +1,643 @@
+<% const activePage='articles' %>
+  <%- include('../partials/layout-head') %>
+  <link rel="stylesheet" href="/libs/air-datepicker/air-datepicker.css">
+  <style>
+    .air-datepicker {
+      background: var(--surface-1-bg);
+      border: 1px solid var(--surface-border);
+      box-shadow: var(--surface-shadow-1);
+      border-radius: 16px;
+      font-family: inherit;
+      overflow: hidden;
+    }
+    .air-datepicker-cell.-selected- {
+      background: var(--accent);
+      color: #fff;
+    }
+    .air-datepicker-cell.-current- {
+      color: var(--accent);
+    }
+    .air-datepicker-nav--title:hover {
+      background: var(--surface-hover);
+    }
+    [data-theme="dark"] .air-datepicker {
+      background: var(--surface-1-bg);
+      color: var(--text-primary);
+    }
+    [data-theme="dark"] .air-datepicker-body--day-name, [data-theme="dark"] .air-datepicker-cell, [data-theme="dark"] .air-datepicker-nav--title, [data-theme="dark"] .air-datepicker-time--current {
+      color: var(--text-primary);
+    }
+    [data-theme="dark"] .air-datepicker-cell:hover, [data-theme="dark"] .air-datepicker-nav--title:hover, [data-theme="dark"] .air-datepicker-nav--action:hover {
+      background: var(--surface-hover);
+    }
+    [data-theme="dark"] .air-datepicker-nav--action path {
+      color: var(--text-primary);
+      fill: var(--text-primary);
+    }
+    [data-theme="dark"] .air-datepicker-cell.-disabled- {
+      color: var(--text-tertiary);
+    }
+    #publishedAtPicker {
+      cursor: pointer;
+    }
+    .air-datepicker-global-container {
+      z-index: 9999;
+    }
+    .category-select {
+      position: relative;
+      width: 100%;
+    }
+    .category-select-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--surface-border));
+      background: var(--surface-2-bg);
+    }
+    .category-select-trigger:hover {
+      border-color: color-mix(in srgb, var(--accent) 65%, var(--surface-border));
+      background: var(--surface-1-bg);
+    }
+    .category-select-arrow {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      transition: transform 0.15s ease;
+      margin-left: 8px;
+    }
+    .category-select.open .category-select-arrow {
+      transform: rotate(180deg);
+    }
+    .category-select-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      z-index: 1200;
+      background: var(--surface-1-bg);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      box-shadow: var(--surface-shadow-2);
+      overflow: auto;
+      max-height: 240px;
+      display: none;
+    }
+    .category-select.open .category-select-menu {
+      display: block;
+    }
+    .category-option {
+      width: 100%;
+      border: 0;
+      text-align: left;
+      background: transparent;
+      color: var(--text-primary);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .category-option:hover {
+      background: var(--surface-hover);
+    }
+    .category-option.active {
+      background: color-mix(in srgb, var(--accent) 12%, var(--surface-1-bg));
+      color: var(--accent);
+    }
+  </style>
+
+    <% if (typeof error !=='undefined' && error) { %>
+      <div class="flash flash-error">⚠️ <%= error %>
+      </div>
+      <% } %>
+
+        <form method="POST"
+          action="<%= article && article.id ? `/admin/articles/${article.id}?_method=PUT` : '/admin/articles' %>"
+          enctype="multipart/form-data" id="articleForm" style="height: 100%; display: flex; flex-direction: column;">
+
+          <div class="article-edit-layout" style="flex: 1; height: 100%; min-height: calc(100vh - 120px);">
+            <!-- Left: main editor -->
+            <div class="article-editor-wrap"
+              style="display: flex; flex-direction: column; height: 100%; overflow-y: auto;">
+              <!-- Title -->
+              <div class="form-section" style="padding-bottom:20px; flex-shrink: 0;">
+                <input type="text" name="title" class="form-title-input" placeholder="请输入文章标题…"
+                  value="<%= article ? article.title : '' %>" required>
+              </div>
+
+              <!-- Summary & Editor -->
+              <div class="form-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                <div class="form-mb" style="flex-shrink: 0;">
+                  <label class="form-label">文章摘要</label>
+                  <textarea name="summary" class="form-control article-summary-fixed"
+                    placeholder="简短描述文章内容（可选，不填则自动截取正文）"><%= article ? article.summary : '' %></textarea>
+                </div>
+
+                <!-- Editor -->
+                <div
+                  style="width: 100%; display: flex; flex-direction: column; height: 900px; border: 1px solid var(--surface-border); border-radius: 12px; overflow: hidden; background: var(--surface-1-bg); z-index: 10;">
+                  <label class="form-label" style="flex-shrink: 0; padding: 10px 10px 0 10px; margin-bottom: 0;">文章内容
+                    <span style="font-weight:400;color:var(--text-tertiary);">（Rich Text）</span></label>
+                  <!-- 工具栏 -->
+                  <div id="editor-toolbar"
+                    style="border-bottom: 1px solid var(--surface-border); background: var(--surface-3-bg);"></div>
+                  <!-- 编辑区 -->
+                  <div id="editor-container" style="flex: 1; overflow-y: hidden;"></div>
+                  <!-- 隐藏的 textarea 用于提交表单 -->
+                  <textarea id="hiddenContent" name="content"
+                    style="display:none;"><%= article ? article.content : '' %></textarea>
+                </div>
+              </div>
+
+
+
+            </div>
+
+            <!-- Right: settings -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <!-- Submit / Actions -->
+              <div class="form-section">
+                <div class="form-section-title">操作</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <button type="submit" class="btn btn-primary" style="flex:1; justify-content:center;">
+                    🚀 <%= article && article.id ? '保存修改' : '发布文章' %>
+                  </button>
+                  <button type="submit" name="status" value="draft" class="btn btn-secondary"
+                    style="flex:1; justify-content:center;">
+                    💾 草稿
+                  </button>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-secondary" onclick="openPreviewModal()"
+                    style="flex:1; justify-content:center;">👁 预览</button>
+                  <a href="/admin/articles" class="btn btn-danger" style="flex:1; justify-content:center;">✕ 取消</a>
+                </div>
+              </div>
+              <!-- Publish settings -->
+              <div class="form-section">
+                <div class="form-section-title">发布设置</div>
+                <div class="form-mb">
+                  <label class="form-label">发布状态</label>
+                  <select name="status" form="articleForm" class="form-control form-control-sm">
+                    <option value="published" <%=!article || article.status==='published' ? 'selected' : '' %>>✅ 已发布
+                    </option>
+                    <option value="draft" <%=article && article.status==='draft' ? 'selected' : '' %>>📄 草稿</option>
+                  </select>
+                </div>
+                <div class="form-mb">
+                  <label class="form-label">发布时间</label>
+                  <%
+                    function formatDateTime(date) {
+                      if (!date) return '';
+                      const d = new Date(date);
+                      const z = d.getTimezoneOffset() * 60 * 1000;
+                      const localDate = new Date(d.getTime() - z);
+                      return localDate.toISOString().slice(0, 16);
+                    }
+                  %>
+                  <input type="text" id="publishedAtPicker" class="form-control form-control-sm">
+                  <input type="hidden" id="publishedAtValue" name="publishedAt"
+                    value="<%= formatDateTime(article ? (article.publishedAt || article.createdAt) : new Date()) %>">
+                </div>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                  <input type="checkbox" name="pinned" value="1" <%=article && article.pinned ? 'checked' : '' %>
+                  style="width:15px;height:15px;accent-color:var(--admin-blue);">
+                  📌 置顶文章
+                </label>
+              </div>
+
+              <!-- Cover -->
+              <div class="form-section">
+                <div class="form-section-title">封面图片</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <input type="text" name="cover" id="coverUrl" class="form-control form-control-sm"
+                    placeholder="URL 或选择附件" value="<%= article ? article.cover : '' %>"
+                    oninput="updateCoverPreview(this.value)">
+                  <button type="button" class="btn btn-secondary btn-sm" style="justify-content:center;"
+                    onclick="openAttachmentPicker(url => { document.getElementById('coverUrl').value = url; updateCoverPreview(url); }, {accept:'image'})">🖼
+                    选择图片附件</button>
+                </div>
+                <div class="cover-preview" id="coverPreview"
+                  style="margin-top:12px;border-radius:8px;overflow:hidden;border:1px dashed var(--border-color);min-height:80px;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);background:var(--surface-2-bg);font-size:13px;">
+                  <% if (article && article.cover) { %>
+                    <img src="<%= article.cover %>" alt="封面" style="width:100%;height:auto;display:block;">
+                    <% } else { %>
+                      暂无封面
+                      <% } %>
+                </div>
+              </div>
+
+              <!-- Category -->
+              <div class="form-section">
+                <div class="form-section-title">文章分类</div>
+                <% const selectedCategory = article ? categories.find(c => String(c.id) === String(article.CategoryId || '')) : null; %>
+                <div class="category-select" id="categorySelect">
+                  <input type="hidden" name="CategoryId" form="articleForm" id="categoryIdInput" value="<%= article ? (article.CategoryId || '') : '' %>">
+                  <button type="button" class="category-select-trigger form-control form-control-sm" id="categorySelectTrigger" onclick="toggleCategoryDropdown(event)">
+                    <span id="categorySelectLabel"><%= selectedCategory ? selectedCategory.name : '不选分类' %></span>
+                    <span class="category-select-arrow">⌄</span>
+                  </button>
+                  <div class="category-select-menu" id="categorySelectMenu">
+                    <button type="button" class="category-option <%= selectedCategory ? '' : 'active' %>" data-value="" data-label="不选分类" onclick="selectCategoryOption(this)">不选分类</button>
+                    <% categories.forEach(cat => { %>
+                      <button type="button" class="category-option <%= article && String(article.CategoryId) === String(cat.id) ? 'active' : '' %>" data-value="<%= cat.id %>" data-label="<%= cat.name %>" onclick="selectCategoryOption(this)"><%= cat.name %></button>
+                    <% }) %>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm"
+                  style="width:100%;margin-top:8px;font-size:12px;color:var(--accent);justify-content:center;"
+                  onclick="openAddCategoryModal()">
+                  + 快速创建分类
+                </button>
+              </div>
+
+              <!-- Tags -->
+              <div class="form-section">
+                <div class="form-section-title">文章标签</div>
+                <div class="checkbox-group">
+                  <% tags.forEach(tag=> { %>
+                    <div class="checkbox-chip">
+                      <input type="checkbox" name="tagIds" form="articleForm" id="tag_<%= tag.id %>"
+                        value="<%= tag.id %>" <%=selectedTags.includes(tag.id) ? 'checked' : '' %>>
+                      <label for="tag_<%= tag.id %>"># <%= tag.name %></label>
+                    </div>
+                    <% }) %>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm"
+                  style="width:100%;margin-top:10px;font-size:12px;color:var(--accent);justify-content:center;"
+                  onclick="openAddTagModal()">
+                  + 快速创建标签
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <script src="/libs/air-datepicker/air-datepicker.js"></script>
+        <script>
+          // Wait for DOM to be ready before initializing the editor
+          document.addEventListener('DOMContentLoaded', () => {
+            const publishedValueInput = document.getElementById('publishedAtValue');
+            const initialRaw = publishedValueInput && publishedValueInput.value ? publishedValueInput.value : '';
+            const initialDate = initialRaw ? new Date(initialRaw.replace(' ', 'T')) : new Date();
+            const zhLocale = {
+              days: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],
+              daysShort: ['日', '一', '二', '三', '四', '五', '六'],
+              daysMin: ['日', '一', '二', '三', '四', '五', '六'],
+              months: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+              monthsShort: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+              today: '今天',
+              clear: '清除',
+              dateFormat: 'yyyy-MM-dd',
+              timeFormat: 'HH:mm',
+              firstDay: 1
+            };
+            new AirDatepicker('#publishedAtPicker', {
+              locale: zhLocale,
+              view: 'days',
+              minView: 'days',
+              autoClose: true,
+              timepicker: true,
+              dateFormat: 'yyyy-MM-dd',
+              altField: '#publishedAtValue',
+              altFieldDateFormat(date) {
+                const p = (n) => String(n).padStart(2, '0');
+                return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
+              },
+              selectedDates: Number.isNaN(initialDate.getTime()) ? [new Date()] : [initialDate]
+            });
+            // Wait a little bit to ensure window.wangEditor is loaded from the CDN
+            setTimeout(() => {
+              if (!window.wangEditor) {
+                console.error('WangEditor script not loaded properly.');
+                return;
+              }
+              const { createEditor, createToolbar } = window.wangEditor;
+
+              const editorConfig = {
+                placeholder: '请输入文章内容...',
+                // onChange 已经在下面通过 editor.on('change') 处理了
+                MENU_CONF: {
+                  uploadImage: {
+                    customUpload(file, insertFn) {
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      fetch('/admin/media/upload', { method: 'POST', body: fd })
+                        .then(r => r.json())
+                        .then(d => {
+                          if (d.ok) {
+                            insertFn(d.url, d.filename, d.url);
+                          } else {
+                            alert('上传失败: ' + d.message);
+                          }
+                        })
+                        .catch(e => alert('上传出错: ' + e.message));
+                    }
+                  }
+                }
+              };
+
+
+              const editor = createEditor({
+                selector: '#editor-container',
+                html: document.getElementById('hiddenContent').value || '',
+                config: editorConfig,
+                mode: 'default',
+              });
+
+              editor.on('change', () => {
+                const html = editor.getHtml();
+                document.getElementById('hiddenContent').value = html;
+              });
+
+
+              const toolbarConfig = {};
+
+              const toolbar = createToolbar({
+                editor,
+                selector: '#editor-toolbar',
+                config: toolbarConfig,
+                mode: 'default',
+              });
+
+              // 暴露给全局以便预览和表单提交使用
+              window.editor = editor;
+
+              // 表单提交前同步数据（防范 onChange 漏掉）
+              document.getElementById('articleForm').addEventListener('submit', function () {
+                document.getElementById('hiddenContent').value = editor.getHtml();
+              });
+            }, 100); // 100ms 延迟
+          });
+
+          // Cover 预览
+          function updateCoverPreview(url) {
+            const preview = document.getElementById('coverPreview');
+            if (url) {
+              preview.innerHTML = `<img src="${url}" alt="封面" style="width:100%;height:auto;display:block;">`;
+            } else {
+              preview.innerHTML = '暂无封面';
+            }
+          }
+
+          // 预览文章
+          function openPreviewModal() {
+            if (!window.editor) {
+              alert('编辑器尚未加载完成，请稍候再试。');
+              return;
+            }
+            const modal = document.getElementById('previewModal');
+            modal.style.display = 'flex';
+            const iframe = document.getElementById('preview-iframe');
+
+            const send = () => {
+              if (!iframe || !iframe.contentWindow || !window.editor) return;
+              const categoryInput = document.getElementById('categoryIdInput');
+              const categoryLabel = document.getElementById('categorySelectLabel');
+              const categoryName = categoryInput && categoryInput.value ? (categoryLabel ? categoryLabel.textContent.trim() : '') : '';
+              const tagNames = Array.from(document.querySelectorAll('input[name="tagIds"]:checked'))
+                .map(el => {
+                  const label = document.querySelector(`label[for="${el.id}"]`);
+                  return label ? label.textContent.replace('# ', '') : '';
+                }).filter(t => t);
+
+              iframe.contentWindow.postMessage({
+                type: 'PREVIEW_ARTICLE',
+                title: document.querySelector('input[name="title"]').value || '未命名文章',
+                content: window.editor.getHtml(),
+                cover: document.getElementById('coverUrl').value,
+                categoryName: categoryName,
+                tagNames: tagNames,
+                pinned: document.querySelector('input[name="pinned"]').checked
+              }, '*');
+            };
+
+            const onReady = (e) => {
+              if (e && e.data && e.data.type === 'PREVIEW_READY') {
+                window.removeEventListener('message', onReady);
+                send();
+              }
+            };
+            window.addEventListener('message', onReady);
+
+            // iframe 在后台已加载过 /article-preview，PREVIEW_READY 只发一次且早于本监听注册；
+            // 不刷新则 onload 不会再次触发，预览永远收不到内容。打开弹窗时强制重新加载。
+            iframe.onload = send;
+            iframe.src = '/article-preview?t=' + Date.now();
+          }
+
+          function closePreviewModal() {
+            document.getElementById('previewModal').style.display = 'none';
+          }
+
+          function setPreviewDevice(device) {
+            const container = document.getElementById('preview-container');
+            const iframeWrap = document.getElementById('preview-iframe-wrap');
+            const btns = document.querySelectorAll('.preview-device-btn');
+
+            btns.forEach(b => {
+              b.style.background = 'transparent';
+              b.style.color = 'var(--text-tertiary)';
+              b.style.fontWeight = 'normal';
+              b.style.pointerEvents = 'auto';
+              b.style.boxShadow = 'none';
+            });
+
+            const activeBtn = document.querySelector(`.preview-device-btn[data-device="${device}"]`);
+            if (activeBtn) {
+              activeBtn.style.background = 'var(--surface-1-bg)';
+              activeBtn.style.color = '#0A7AFF';
+              activeBtn.style.fontWeight = '500';
+              activeBtn.style.pointerEvents = 'none';
+              activeBtn.style.boxShadow = 'var(--surface-shadow-2)';
+            }
+
+            if (device === 'desktop') {
+              iframeWrap.style.width = '100%';
+              iframeWrap.style.height = '100%';
+              iframeWrap.style.border = 'none';
+              iframeWrap.style.borderRadius = '0';
+              container.style.paddingTop = '0';
+            } else if (device === 'tablet') {
+              iframeWrap.style.width = '768px';
+              iframeWrap.style.height = '90%';
+              iframeWrap.style.border = '12px solid #333';
+              iframeWrap.style.borderRadius = '32px';
+              container.style.paddingTop = '24px';
+            } else {
+              iframeWrap.style.width = '375px';
+              iframeWrap.style.height = '90%';
+              iframeWrap.style.border = '12px solid #333';
+              iframeWrap.style.borderRadius = '32px';
+              container.style.paddingTop = '24px';
+            }
+          }
+        </script>
+
+        </div>
+
+        <script>
+          // ── 快速创建分类/标签逻辑 ──
+
+          function openAddCategoryModal() {
+            document.getElementById('addCategoryModal').style.display = 'flex';
+          }
+          function closeAddCategoryModal() {
+            document.getElementById('addCategoryModal').style.display = 'none';
+            document.getElementById('newCategoryName').value = '';
+          }
+
+          function toggleCategoryDropdown(event) {
+            if (event) event.stopPropagation();
+            const box = document.getElementById('categorySelect');
+            if (!box) return;
+            box.classList.toggle('open');
+          }
+
+          function closeCategoryDropdown() {
+            const box = document.getElementById('categorySelect');
+            if (box) box.classList.remove('open');
+          }
+
+          function selectCategoryOption(el) {
+            const value = el.getAttribute('data-value') || '';
+            const label = el.getAttribute('data-label') || '不选分类';
+            const input = document.getElementById('categoryIdInput');
+            const text = document.getElementById('categorySelectLabel');
+            if (input) input.value = value;
+            if (text) text.textContent = label;
+            document.querySelectorAll('#categorySelectMenu .category-option').forEach(btn => {
+              btn.classList.toggle('active', btn === el);
+            });
+            closeCategoryDropdown();
+          }
+
+          function renderCategoryMenu(categories, selectedId) {
+            const menu = document.getElementById('categorySelectMenu');
+            const input = document.getElementById('categoryIdInput');
+            const label = document.getElementById('categorySelectLabel');
+            if (!menu || !input || !label) return;
+            const selected = categories.find(cat => String(cat.id) === String(selectedId || ''));
+            const finalValue = selected ? String(selected.id) : '';
+            const finalLabel = selected ? selected.name : '不选分类';
+            input.value = finalValue;
+            label.textContent = finalLabel;
+            let html = '<button type="button" class="category-option' + (finalValue ? '' : ' active') + '" data-value="" data-label="不选分类" onclick="selectCategoryOption(this)">不选分类</button>';
+            categories.forEach(cat => {
+              const active = String(cat.id) === finalValue ? ' active' : '';
+              html += '<button type="button" class="category-option' + active + '" data-value="' + cat.id + '" data-label="' + String(cat.name).replace(/"/g, '&quot;') + '" onclick="selectCategoryOption(this)">' + String(cat.name).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</button>';
+            });
+            menu.innerHTML = html;
+          }
+
+          async function submitNewCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            if (!name) return alert('名称不能为空');
+
+            const btn = document.getElementById('submitCategoryBtn');
+            btn.disabled = true;
+            btn.innerText = '创建中...';
+
+            try {
+              const res = await fetch('/admin/categories?ajax=1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              const data = await res.json();
+              if (data.ok) {
+                await refreshCategoryList(data.category.id);
+                closeAddCategoryModal();
+              } else {
+                alert(data.message || '创建失败');
+              }
+            } catch (err) {
+              alert('网络错误');
+            } finally {
+              btn.disabled = false;
+              btn.innerText = '确认创建';
+            }
+          }
+
+          async function refreshCategoryList(selectedId) {
+            try {
+              const res = await fetch('/admin/categories/list');
+              const data = await res.json();
+              if (data.ok) {
+                renderCategoryMenu(data.categories || [], selectedId);
+              }
+            } catch (err) { console.error('Refresh categories failed', err); }
+          }
+
+          function openAddTagModal() {
+            document.getElementById('addTagModal').style.display = 'flex';
+          }
+          function closeAddTagModal() {
+            document.getElementById('addTagModal').style.display = 'none';
+            document.getElementById('newTagName').value = '';
+          }
+
+          async function submitNewTag() {
+            const name = document.getElementById('newTagName').value.trim();
+            if (!name) return alert('名称不能为空');
+
+            const btn = document.getElementById('submitTagBtn');
+            btn.disabled = true;
+            btn.innerText = '创建中...';
+
+            try {
+              const res = await fetch('/admin/tags?ajax=1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              const data = await res.json();
+              if (data.ok) {
+                // 获取当前已选中的标签
+                const checkedIds = Array.from(document.querySelectorAll('input[name="tagIds"]:checked')).map(el => el.value);
+                if (!checkedIds.includes(String(data.tag.id))) checkedIds.push(String(data.tag.id));
+
+                await refreshTagList(checkedIds);
+                closeAddTagModal();
+              } else {
+                alert(data.message || '创建失败');
+              }
+            } catch (err) {
+              alert('网络错误');
+            } finally {
+              btn.disabled = false;
+              btn.innerText = '确认创建';
+            }
+          }
+
+          async function refreshTagList(checkedIds) {
+            try {
+              const res = await fetch('/admin/tags/list');
+              const data = await res.json();
+              if (data.ok) {
+                const group = document.querySelector('.checkbox-group');
+                let html = '';
+                data.tags.forEach(tag => {
+                  const isChecked = checkedIds.includes(String(tag.id));
+                  html += `
+          <div class="checkbox-chip">
+            <input type="checkbox" name="tagIds" form="articleForm"
+              id="tag_${tag.id}" value="${tag.id}"
+              ${isChecked ? 'checked' : ''}>
+            <label for="tag_${tag.id}"># ${tag.name}</label>
+          </div>`;
+                });
+                group.innerHTML = html;
+              }
+            } catch (err) { console.error('Refresh tags failed', err); }
+          }
+
+          document.addEventListener('click', (e) => {
+            const box = document.getElementById('categorySelect');
+            if (!box) return;
+            if (!box.contains(e.target)) closeCategoryDropdown();
+          });
+        </script>
+
+        <%- include('../partials/layout-foot') %>

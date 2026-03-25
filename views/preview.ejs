@@ -1,0 +1,203 @@
+<%- include('partials/head', { title: '文章预览' }) %>
+<%- include('partials/nav') %>
+
+<main class="page-container" style="padding-top: 20px;">
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="javascript:;">🏠 首页</a>
+    <span class="breadcrumb-sep">›</span>
+    <span id="previewBreadcrumbCategory">全部分类</span>
+    <span class="breadcrumb-sep">›</span>
+    <span style="color:var(--text-secondary);" id="previewBreadcrumbTitle">预览文章</span>
+  </div>
+
+  <div class="article-layout">
+    <!-- Main content -->
+    <div style="min-width:0;">
+      <div class="article-detail-card">
+        <div id="previewCoverContainer">
+           <div class="article-detail-cover article-cover-placeholder" style="background:linear-gradient(135deg,var(--accent),var(--accent-light));display:flex;align-items:center;justify-content:center;font-size:60px;">📝</div>
+        </div>
+        
+        <div class="article-detail-body" style="padding:var(--space-xl);">
+          <!-- Badges -->
+          <div class="article-header-tags" id="previewBadges" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+            <span class="badge badge-accent">预览模式</span>
+          </div>
+
+          <h1 class="article-detail-title" id="previewMainTitle">加载预览中...</h1>
+
+          <!-- Meta -->
+          <div class="article-detail-meta">
+            <span>✍️ <%= user ? user.nickname : '管理员' %></span>
+            <span>📅 <%= new Date().toLocaleDateString('zh-CN') %></span>
+            <span>👁️ 0 次阅读</span>
+          </div>
+
+          <!-- Content -->
+          <div class="prose article-prose" id="previewContent">
+            请在后台输入内容以预览...
+          </div>
+
+          <!-- Tags -->
+          <div class="article-tags" id="previewTags" style="display:none;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Prev / Next Demo -->
+      <div class="article-nav" style="opacity: 0.5; pointer-events: none;">
+        <div>
+          <a href="javascript:;" class="article-nav-card">
+            <span class="article-nav-label">‹ 上一篇</span>
+            <span class="article-nav-title">上一篇文章标题（预览仅展示样式）</span>
+          </a>
+        </div>
+        <div>
+          <a href="javascript:;" class="article-nav-card right">
+            <span class="article-nav-label">下一篇 ›</span>
+            <span class="article-nav-title">下一篇文章标题（预览仅展示样式）</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar: TOC -->
+    <aside class="article-aside-sticky">
+      <div class="toc-card" id="toc" style="display:none;">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--surface-border);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-tertiary);">目录</div>
+        <div id="tocList" style="padding:8px;max-height:60vh;overflow-y:auto;font-size:13px;"></div>
+      </div>
+
+      <!-- Back to top -->
+      <div style="margin-top:16px;text-align:center;">
+        <button onclick="window.scrollTo({top:0,behavior:'smooth'})"
+          style="width:100%;padding:10px;border-radius:14px;background:var(--surface-3-bg);border:1px solid var(--surface-border);color:var(--text-secondary);cursor:pointer;font-size:13px;font-weight:500;transition:background 0.15s;"
+          onmouseover="this.style.background='var(--accent-tint)';this.style.color='var(--accent)'"
+          onmouseout="this.style.background='var(--surface-3-bg)';this.style.color='var(--text-secondary)'">
+          ⬆️ 回到顶部
+        </button>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<%- include('partials/footer') %>
+
+<script src="/libs/dompurify/purify.min.js"></script>
+<script src="/libs/highlightjs/highlight.min.js"></script>
+<script src="/libs/mermaid/mermaid.min.js"></script>
+<script src="/libs/katex/katex.min.js"></script>
+<script src="/libs/katex/contrib/auto-render.min.js"></script>
+
+<script>
+// ── 实时预览监听 ──
+window.addEventListener('message', async (event) => {
+  if (!event.data || event.data.type !== 'PREVIEW_ARTICLE') return;
+  
+  const { title, content, cover, categoryName, tagNames, pinned } = event.data;
+  
+  // 1. 更新标题
+  const displayTitle = title || '无标题文章';
+  document.title = displayTitle + ' - 预览';
+  document.getElementById('previewBreadcrumbTitle').textContent = displayTitle;
+  document.getElementById('previewMainTitle').textContent = displayTitle;
+
+  // 2. 更新封面
+  const coverContainer = document.getElementById('previewCoverContainer');
+  if (cover) {
+    coverContainer.innerHTML = `<img src="${cover}" class="article-detail-cover" alt="${displayTitle}">`;
+  } else {
+    coverContainer.innerHTML = `<div class="article-detail-cover article-cover-placeholder" style="background:linear-gradient(135deg,var(--accent),var(--accent-light));display:flex;align-items:center;justify-content:center;font-size:60px;">📝</div>`;
+  }
+
+  // 3. 更新分类与徽章
+  document.getElementById('previewBreadcrumbCategory').textContent = categoryName || '全部分类';
+  const badgesBox = document.getElementById('previewBadges');
+  let badgesHtml = '';
+  if (pinned) badgesHtml += '<span class="badge-pinned">📌 置顶</span>';
+  if (categoryName) badgesHtml += `<span class="badge badge-accent">${categoryName}</span>`;
+  badgesHtml += '<span class="badge badge-accent" style="opacity:0.6;">预览模式</span>';
+  badgesBox.innerHTML = badgesHtml;
+
+  // 4. 更新正文
+  const previewContent = document.getElementById('previewContent');
+  let cleanHtml = DOMPurify.sanitize(content || '', {
+    ADD_TAGS: ['iframe', 'style', 'script'],
+    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
+  });
+  previewContent.innerHTML = cleanHtml;
+
+  // 5. 更新标签
+  const tagsBox = document.getElementById('previewTags');
+  if (tagNames && tagNames.length) {
+    tagsBox.style.display = 'block';
+    tagsBox.innerHTML = '<span style="font-size:13px;color:var(--text-tertiary);margin-right:4px;">🏷️</span>' + 
+      tagNames.map(t => `<span class="badge-tag"># ${t}</span>`).join('');
+  } else {
+    tagsBox.style.display = 'none';
+  }
+
+  // 6. 重新高亮代码
+  document.querySelectorAll('pre code').forEach((block) => {
+    if (window.hljs) {
+       block.removeAttribute('data-highlighted');
+       hljs.highlightElement(block);
+    }
+  });
+
+  // 7. 重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    try {
+      renderMathInElement(previewContent, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    } catch {}
+  }
+
+  // 8. 重新初始化 Mermaid
+  if (typeof mermaid !== 'undefined') {
+    mermaid.init(undefined, document.querySelectorAll('.language-mermaid'));
+  }
+
+  // 9. 重新生成目录
+  generateTOC();
+});
+
+function generateTOC() {
+  const content = document.getElementById('previewContent');
+  const tocList = document.getElementById('tocList');
+  const toc = document.getElementById('toc');
+  if (!content || !tocList) return;
+  
+  tocList.innerHTML = ''; // 清空
+  const headings = content.querySelectorAll('h2, h3, h4');
+  if (headings.length < 2) {
+    toc.style.display = 'none';
+    return;
+  }
+
+  toc.style.display = '';
+  headings.forEach((h, i) => {
+    const id = 'h-' + i;
+    h.id = id;
+    const a = document.createElement('a');
+    a.href = '#' + id;
+    a.textContent = h.textContent;
+    const indent = h.tagName === 'H2' ? 0 : h.tagName === 'H3' ? 14 : 28;
+    a.style.cssText = `display:block;padding:5px 10px 5px ${10+indent}px;border-radius:8px;color:var(--text-secondary);text-decoration:none;font-size:${h.tagName === 'H2' ? '13px' : '12px'};transition:all 0.15s;${h.tagName === 'H2' ? 'font-weight:500;' : ''}`;
+    a.onclick = (e) => {
+      e.preventDefault();
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    tocList.appendChild(a);
+  });
+}
+
+// 告诉父窗口已就绪
+window.parent.postMessage({ type: 'PREVIEW_READY' }, '*');
+</script>

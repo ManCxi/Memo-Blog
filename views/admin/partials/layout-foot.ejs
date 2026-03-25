@@ -1,0 +1,356 @@
+      </div><!-- /animate-fade-in-up -->
+    </div><!-- /admin-content -->
+  </div><!-- /admin-main -->
+</div><!-- /admin-layout -->
+
+<!-- Mobile Bottom Tab Bar -->
+<nav class="admin-tab-bar">
+  <a href="/admin" class="admin-tab-item <%= typeof activePage !== 'undefined' && activePage === 'dashboard' ? 'active' : '' %>">
+    <span class="admin-tab-icon">📊</span>
+    <span class="admin-tab-label">仪表盘</span>
+  </a>
+  <a href="/admin/articles" class="admin-tab-item <%= typeof activePage !== 'undefined' && activePage === 'articles' ? 'active' : '' %>">
+    <span class="admin-tab-icon">📝</span>
+    <span class="admin-tab-label">文章</span>
+  </a>
+  <a href="/admin/media" class="admin-tab-item <%= typeof activePage !== 'undefined' && activePage === 'media' ? 'active' : '' %>">
+    <span class="admin-tab-icon">🖼️</span>
+    <span class="admin-tab-label">媒体</span>
+  </a>
+  <button class="admin-tab-item" onclick="toggleSidebar()">
+    <span class="admin-tab-icon">☰</span>
+    <span class="admin-tab-label">更多</span>
+  </button>
+</nav>
+
+<script src="/libs/wangeditor/index.js"></script>
+<script>
+  // 确保全局能够拿到 wangEditor
+  window.wangEditor = window.wangEditor;
+</script>
+<script>
+// ── Theme toggle ──
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme') || 'light';
+  const next = current === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+    btn.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
+}
+(function() {
+  const theme = localStorage.getItem('theme') || 'light';
+  document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+    btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  });
+})();
+
+const __enhancedSelectCloseFns = [];
+function closeAllEnhancedSelects() {
+  __enhancedSelectCloseFns.forEach(fn => fn());
+}
+function initAdminSelects(root = document) {
+  const scope = root && root.querySelectorAll ? root : document;
+  const selects = scope.querySelectorAll('select.form-control:not([multiple]):not([data-native-select]):not([data-admin-select-enhanced])');
+  selects.forEach(select => {
+    select.dataset.adminSelectEnhanced = '1';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'admin-select';
+    if (select.classList.contains('form-control-sm')) {
+      wrapper.classList.add('form-control-sm');
+    }
+    const inlineStyle = select.getAttribute('style');
+    if (inlineStyle) {
+      wrapper.setAttribute('style', inlineStyle);
+    }
+    if (select.style.width === 'auto') {
+      wrapper.classList.add('native-width');
+    }
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'form-control admin-select-trigger' + (select.classList.contains('form-control-sm') ? ' form-control-sm' : '');
+    const label = document.createElement('span');
+    const arrow = document.createElement('span');
+    arrow.className = 'admin-select-arrow';
+    arrow.textContent = '▾';
+    trigger.appendChild(label);
+    trigger.appendChild(arrow);
+    const menu = document.createElement('div');
+    menu.className = 'admin-select-menu';
+    function syncFromSelect() {
+      const selected = select.options[select.selectedIndex];
+      label.textContent = selected ? selected.textContent.trim() : '';
+      menu.querySelectorAll('.admin-select-option').forEach(btn => {
+        const active = btn.dataset.value === select.value;
+        btn.classList.toggle('active', active);
+      });
+    }
+    function close() {
+      wrapper.classList.remove('open');
+    }
+    __enhancedSelectCloseFns.push(close);
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = !wrapper.classList.contains('open');
+      closeAllEnhancedSelects();
+      if (willOpen) wrapper.classList.add('open');
+    });
+    Array.from(select.options).forEach(option => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'admin-select-option';
+      btn.dataset.value = option.value;
+      btn.textContent = option.textContent;
+      if (option.disabled) {
+        btn.classList.add('disabled');
+      }
+      btn.addEventListener('click', () => {
+        if (option.disabled) return;
+        select.value = option.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        syncFromSelect();
+        close();
+      });
+      menu.appendChild(btn);
+    });
+    select.addEventListener('change', syncFromSelect);
+    const parent = select.parentNode;
+    parent.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    wrapper.appendChild(trigger);
+    wrapper.appendChild(menu);
+    select.style.display = 'none';
+    syncFromSelect();
+  });
+}
+document.addEventListener('click', closeAllEnhancedSelects);
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeAllEnhancedSelects();
+});
+const __enhancedSelectObserver = new MutationObserver((mutations) => {
+  let shouldInit = false;
+  mutations.forEach(m => {
+    if (m.type === 'childList' && m.addedNodes && m.addedNodes.length) shouldInit = true;
+  });
+  if (shouldInit) initAdminSelects(document);
+});
+if (document.body) {
+  __enhancedSelectObserver.observe(document.body, { childList: true, subtree: true });
+}
+initAdminSelects(document);
+
+// ── Sidebar / Drawer ──
+const sidebar = document.getElementById('adminSidebar');
+const overlay = document.getElementById('sidebarOverlay');
+
+// 自动移除悬浮提示
+setTimeout(() => {
+  document.querySelectorAll('.floating-toast').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translate(-50%, -20px)';
+    el.style.transition = 'all 0.3s ease';
+    setTimeout(() => el.remove(), 300);
+  });
+}, 2000);
+
+function openSidebar() {
+  if (!sidebar || !overlay) return;
+  sidebar.classList.add('mobile-open');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  if (!sidebar || !overlay) return;
+  sidebar.classList.remove('mobile-open');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+function toggleSidebar() {
+  if (sidebar && sidebar.classList.contains('mobile-open')) {
+    closeSidebar();
+  } else {
+    openSidebar();
+  }
+}
+
+// Close sidebar on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeSidebar();
+});
+
+// ── Modal helpers ──
+function openModal(id)  {
+  const el = document.getElementById(id);
+  if (el) { el.style.display = 'flex'; el.classList.add('open'); }
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  // 必须用 none：admin.css 里 .modal-overlay 默认是 display:flex，清空 inline 会回到可见状态
+  if (el) { el.style.display = 'none'; el.classList.remove('open'); }
+}
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', function(e) {
+    if (e.target === this) { this.style.display = 'none'; this.classList.remove('open'); }
+  });
+});
+
+// ── Toast helper ──
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.style.opacity = '0', 2700);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── 通用附件选择器 ──
+let _attachmentPickerCb = null;
+function openAttachmentPicker(cb, opts = {}) {
+  _attachmentPickerCb = cb;
+  const modal = document.getElementById('attachmentPicker');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  loadAttachmentList(opts.accept || 'all');
+}
+function closeAttachmentPicker() {
+  const modal = document.getElementById('attachmentPicker');
+  if (modal) modal.style.display = 'none';
+}
+async function loadAttachmentList(type = 'all', keyword = '') {
+  const grid = document.getElementById('attachmentPickerGrid');
+  grid.innerHTML = '加载中...';
+  const q = new URLSearchParams({ type, keyword, limit: '60' }).toString();
+  const r = await fetch('/admin/media/list?' + q);
+  const d = await r.json();
+  if (!d.ok) { grid.innerHTML = '加载失败'; return; }
+  grid.innerHTML = '';
+  d.items.forEach(it => {
+    const el = document.createElement('div');
+    el.className = 'media-grid-item';
+    el.style.cursor = 'pointer';
+    el.onclick = () => { if (_attachmentPickerCb) _attachmentPickerCb(it.path); closeAttachmentPicker(); };
+    if (it.fileType === 'image') {
+      const img = document.createElement('img');
+      img.src = it.path; img.className = 'media-grid-thumb';
+      el.appendChild(img);
+    } else {
+      const icon = document.createElement('div');
+      icon.className = 'media-grid-icon';
+      icon.textContent = '📦';
+      el.appendChild(icon);
+    }
+    grid.appendChild(el);
+  });
+  if (!d.items.length) grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 60px 20px; text-align: center; color: var(--text-tertiary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px dashed var(--border-color);"><div style="font-size: 48px; opacity: 0.6;">📭</div><div style="font-size: 14px; font-weight: 500;">暂无文件</div><div style="font-size: 13px; opacity: 0.8;">您可以点击右上方的「上传新文件」按钮添加文件</div></div>';
+}
+async function doAttachmentUpload(files) {
+  const list = Array.from(files || []);
+  if (!list.length) return;
+  const text = document.getElementById('attachmentUploadText');
+  for (const f of list) {
+    text.textContent = '正在上传：' + f.name;
+    const fd = new FormData(); fd.append('file', f);
+    const r = await fetch('/admin/media/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok && _attachmentPickerCb) { _attachmentPickerCb(d.url); closeAttachmentPicker(); }
+  }
+  text.textContent = '';
+}
+</script>
+
+<!-- 通用「选择附件」弹窗 -->
+<div id="attachmentPicker" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeAttachmentPicker()">
+  <div class="modal-box attachment-picker-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">选择附件</h3>
+      <button class="modal-close" onclick="closeAttachmentPicker()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="attachment-picker-toolbar">
+        <select id="attachmentTypeFilter" class="form-control form-control-sm attachment-picker-type" onchange="loadAttachmentList(this.value, document.getElementById('attachmentKeyword').value)">
+          <option value="all">全部</option>
+          <option value="image">图片</option>
+          <option value="video">视频</option>
+          <option value="audio">音频</option>
+          <option value="document">文档</option>
+          <option value="other">其他</option>
+        </select>
+        <input id="attachmentKeyword" class="form-control form-control-sm attachment-picker-keyword" placeholder="搜索文件名..." onkeydown="if(event.key==='Enter')loadAttachmentList(document.getElementById('attachmentTypeFilter').value,this.value)">
+        <button class="btn btn-secondary btn-sm" onclick="loadAttachmentList(document.getElementById('attachmentTypeFilter').value, document.getElementById('attachmentKeyword').value)">搜索</button>
+        <label class="btn btn-primary btn-sm attachment-picker-upload">
+          上传新文件
+          <input type="file" style="display:none" onchange="doAttachmentUpload(this.files)">
+        </label>
+      </div>
+      <div id="attachmentPickerGrid" class="media-grid"></div>
+      <div id="attachmentUploadText" class="text-tertiary" style="margin-top:8px;font-size:12px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeAttachmentPicker()">关闭</button>
+    </div>
+  </div>
+</div>
+<!-- 预览弹窗 -->
+<div id="previewModal" style="display:none; position:fixed; inset:0; z-index:99999; flex-direction:column; background:var(--surface-3-bg);">
+  <div style="height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; background:var(--surface-1-bg); border-bottom:1px solid var(--surface-border); flex-shrink:0;">
+    <span style="font-weight:600;">文章预览</span>
+    <div style="display:flex; background:var(--surface-3-bg); padding:4px; border-radius:12px; gap:4px;">
+      <button type="button" class="preview-device-btn btn btn-sm" data-device="desktop" onclick="setPreviewDevice('desktop')" style="background:var(--surface-1-bg); color:#0A7AFF; box-shadow:var(--surface-shadow-2); pointer-events:none;">💻 电脑</button>
+      <button type="button" class="preview-device-btn btn btn-sm" data-device="tablet" onclick="setPreviewDevice('tablet')" style="background:transparent; color:var(--text-tertiary); border:none;">📱 平板</button>
+      <button type="button" class="preview-device-btn btn btn-sm" data-device="mobile" onclick="setPreviewDevice('mobile')" style="background:transparent; color:var(--text-tertiary); border:none;">📱 手机</button>
+    </div>
+    <button type="button" class="btn btn-danger btn-sm" onclick="closePreviewModal()">✕ 关闭预览</button>
+  </div>
+  
+  <div id="preview-container" style="flex:1; overflow:hidden; display:flex; justify-content:center; align-items:flex-start; padding-top:0; transition:padding 0.3s; background-image:radial-gradient(#ccc 1px, transparent 1px); background-size:20px 20px;">
+    <div id="preview-iframe-wrap" style="width:100%; height:100%; background:#fff; transition:all 0.3s; overflow:hidden; display:flex; flex-direction:column;">
+      <iframe id="preview-iframe" src="about:blank" title="文章预览" style="width:100%; height:100%; border:none; background:#fff;"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- 快速创建分类/标签弹窗 (移动至 Body 根级以确保全屏) -->
+<div id="addCategoryModal" class="modal-overlay" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+  <div class="modal-box" style="max-width:400px; margin: 20px;">
+    <div class="modal-header">
+      <h3 class="modal-title">✨ 快速创建分类</h3>
+      <button class="modal-close" onclick="closeAddCategoryModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-mb">
+        <label class="form-label">分类名称</label>
+        <input type="text" id="newCategoryName" class="form-control" placeholder="例如：技术心得">
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex; gap:12px;">
+      <button type="button" id="submitCategoryBtn" class="btn btn-primary" style="flex:1; justify-content:center;" onclick="submitNewCategory()">确认创建</button>
+      <button type="button" class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeAddCategoryModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="addTagModal" class="modal-overlay" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+  <div class="modal-box" style="max-width:400px; margin: 20px;">
+    <div class="modal-header">
+      <h3 class="modal-title">🏷️ 快速创建标签</h3>
+      <button class="modal-close" onclick="closeAddTagModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-mb">
+        <label class="form-label">标签名称</label>
+        <input type="text" id="newTagName" class="form-control" placeholder="例如：React">
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex; gap:12px;">
+      <button type="button" id="submitTagBtn" class="btn btn-primary" style="flex:1; justify-content:center;" onclick="submitNewTag()">确认创建</button>
+      <button type="button" class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeAddTagModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

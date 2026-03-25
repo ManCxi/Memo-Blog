@@ -1,0 +1,212 @@
+<%
+  const bloggerInfo = (settings && settings.blogger_info) ? settings.blogger_info : {};
+  const demoSidebar = {
+    articleCount: 74,
+    recentArticles: [
+      { title: 'iptables 实战指南：从思路到产出', slug: 'demo-iptables' },
+      { title: 'Linux 权限管理最佳实践', slug: 'demo-linux-perm' },
+      { title: 'Linux 入门到进阶：常见命令精讲', slug: 'demo-linux-advance' },
+      { title: 'LVM 磁盘管理详解', slug: 'demo-lvm' }
+    ],
+    tags: [
+      { name: 'Linux', slug: 'linux' },
+      { name: '安全', slug: 'security' },
+      { name: '网络', slug: 'network' },
+      { name: '教程', slug: 'tutorial' },
+      { name: 'Shell', slug: 'shell' },
+      { name: '运维', slug: 'ops' }
+    ],
+    categories: [
+      { name: '教程', slug: 'tutorial', articleCount: 12 },
+      { name: '实践', slug: 'practice', articleCount: 9 },
+      { name: '工具', slug: 'tools', articleCount: 6 }
+    ]
+  };
+  const hasRealSidebar =
+    sidebar &&
+    (
+      (Array.isArray(sidebar.recentArticles) && sidebar.recentArticles.length > 0) ||
+      (Array.isArray(sidebar.tags) && sidebar.tags.length > 0) ||
+      (Array.isArray(sidebar.categories) && sidebar.categories.length > 0) ||
+      (typeof sidebar.articleCount === 'number' && sidebar.articleCount > 0)
+    );
+  const sb = hasRealSidebar ? sidebar : demoSidebar;
+%>
+
+<aside class="home-sidebar sidebar">
+  <div class="sidebar-card profile-card">
+    <div class="profile-banner">
+      <div class="profile-avatar-wrap">
+        <% if (bloggerInfo.avatar) { %>
+        <img src="<%= bloggerInfo.avatar %>" alt="avatar" class="profile-avatar">
+        <% } else { %>
+        <div class="profile-avatar-placeholder"><%= (bloggerInfo.nickname && bloggerInfo.nickname[0]) || siteTitle[0] || 'B' %></div>
+        <% } %>
+      </div>
+    </div>
+    <div class="profile-body">
+      <p class="profile-name"><%= bloggerInfo.nickname || '达摩匠' %></p>
+      <p class="profile-bio"><%= bloggerInfo.bio || 'Hi，我是达摩匠，欢迎来到我的技术空间' %></p>
+
+      <% if (bloggerInfo.github || bloggerInfo.qq || bloggerInfo.website) { %>
+      <div class="profile-social">
+        <% if (bloggerInfo.github) { %>
+        <a href="<%= bloggerInfo.github %>" target="_blank" rel="noopener" class="profile-social-link" title="GitHub">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        </a>
+        <% } %>
+        <% if (bloggerInfo.qq) { %>
+        <a href="http://wpa.qq.com/msgrd?v=3&uin=<%= bloggerInfo.qq %>&site=qq&menu=yes" target="_blank" rel="noopener" class="profile-social-link" title="QQ">
+          <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+            <path d="M824.8 613.2c-16-51.4-34.4-94.6-62.7-165.3C766.5 262.2 689.3 112 511.5 112 331.7 112 256.2 265.2 261 447.9c-28.4 70.8-46.7 113.7-62.7 165.3-34 109.5-23 154.8-14.6 155.8 18 2.2 70.1-82.4 70.1-82.4 0 49 25.2 112.9 79.8 159-26.4 8.1-85.7 29.9-71.6 53.8 11.4 19.3 196.2 12.3 249.5 6.3 53.3 6 238.1 13 249.5-6.3 14.1-23.8-45.3-45.7-71.6-53.8 54.6-46.2 79.8-110.1 79.8-159 0 0 52.1 84.6 70.1 82.4 8.5-1.1 19.5-46.4-14.5-155.8z"/>
+          </svg>
+        </a>
+        <% } %>
+        <% if (bloggerInfo.website) { %>
+        <a href="<%= bloggerInfo.website %>" target="_blank" rel="noopener" class="profile-social-link" title="个人网站">🌐</a>
+        <% } %>
+      </div>
+      <% } %>
+
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <span class="profile-stat-value"><%= (typeof sb !== 'undefined' && sb.articleCount !== undefined) ? sb.articleCount : 0 %></span>
+          <span class="profile-stat-label">文章</span>
+        </div>
+        <div class="profile-stat-divider"></div>
+        <div class="profile-stat">
+          <span class="profile-stat-value"><%= typeof sb !== 'undefined' && sb.categories ? sb.categories.length : 0 %></span>
+          <span class="profile-stat-label">分类</span>
+        </div>
+        <div class="profile-stat-divider"></div>
+        <div class="profile-stat">
+          <span class="profile-stat-value"><%= typeof sb !== 'undefined' && sb.tags ? sb.tags.length : 0 %></span>
+          <span class="profile-stat-label">标签</span>
+        </div>
+      </div>
+      <%
+        const contactEmail = bloggerInfo.email || (typeof settings !== 'undefined' && settings ? settings.contact_email : null);
+      %>
+      <% if (bloggerInfo.github || contactEmail) { %>
+      <div class="profile-links">
+        <% if (bloggerInfo.github) { %>
+        <a href="<%= bloggerInfo.github %>" target="_blank" rel="noopener" class="profile-link-btn">🐙 GitHub</a>
+        <% } %>
+        <% if (contactEmail) { %>
+        <a href="mailto:<%= contactEmail %>" class="profile-link-btn">✉️ 邮件</a>
+        <% } %>
+      </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="sidebar-card">
+    <div class="sidebar-card-title">
+      <div class="sidebar-card-title-icon" style="background:rgba(255,107,53,0.12);">🔥</div>
+      近期热文
+    </div>
+    <div style="padding:var(--space-sm) var(--space-lg) var(--space-lg);">
+      <% (sb.recentArticles || []).slice(0,6).forEach((a, i) => { %>
+      <a href="/article/<%= a.slug %>" class="latest-article-item">
+        <div class="latest-article-num <%= i < 3 ? 'num-' + (i+1) : 'num-other' %>"><%= i + 1 %></div>
+        <div class="latest-article-title"><%= a.title %></div>
+      </a>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="sidebar-card">
+    <div class="sidebar-card-title">
+      <div class="sidebar-card-title-icon" style="background:rgba(0,122,255,0.12);">🏷️</div>
+      标签云
+    </div>
+    <div class="tag-cloud">
+      <% (sb.tags || []).slice(0,20).forEach(tag => { %>
+      <a href="/tag/<%= tag.slug %>" class="tag-cloud-item"># <%= tag.name %></a>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="sidebar-card">
+    <div class="sidebar-card-title">
+      <div class="sidebar-card-title-icon" style="background:rgba(52,199,89,0.12);">⏳</div>
+      时光流逝
+    </div>
+    <div style="padding:0 var(--space-lg) var(--space-lg);">
+      <div class="countdown-item">
+        <div class="countdown-label-row">
+          <span>今日已过</span>
+          <span class="countdown-percent" id="countdownDay">--%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressDay" style="width:0%"></div></div>
+      </div>
+      <div class="countdown-item">
+        <div class="countdown-label-row">
+          <span>本周已过</span>
+          <span class="countdown-percent" id="countdownWeek">--%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressWeek" style="width:0%"></div></div>
+      </div>
+      <div class="countdown-item">
+        <div class="countdown-label-row">
+          <span>本月已过</span>
+          <span class="countdown-percent" id="countdownMonth">--%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressMonth" style="width:0%"></div></div>
+      </div>
+      <div class="countdown-item">
+        <div class="countdown-label-row">
+          <span>今年已过</span>
+          <span class="countdown-percent" id="countdownYear">--%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressYear" style="width:0%"></div></div>
+      </div>
+      <div class="runtime-badge" id="runtimeBadge">
+        <div class="runtime-dot"></div>
+        <span id="sidebarRuntime">已运行 --</span>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function() {
+    var startStr = '<%= (settings && settings.run_since) ? settings.run_since : "2024-01-01T00:00:00Z" %>';
+    const start = new Date(startStr).getTime();
+    function pad(n) { return String(n).padStart(2,'0'); }
+    function update() {
+      const now = new Date();
+      const s = Math.floor((Date.now() - start) / 1000);
+      if (!isFinite(s)) return;
+      const d = Math.floor(s / 86400);
+      const h = pad(Math.floor((s % 86400) / 3600));
+      const m = pad(Math.floor((s % 3600) / 60));
+      const el = document.getElementById('sidebarRuntime');
+      if (el) el.textContent = '已运行 ' + d + ' 天 ' + h + ':' + m;
+
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const endOfDay = startOfDay + 86400000;
+      const pDay = Math.round(((now - startOfDay) / (endOfDay - startOfDay)) * 100);
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0,0,0,0);
+      const endOfWeek = startOfWeek.getTime() + 7*86400000;
+      const pWeek = Math.round(((now - startOfWeek.getTime()) / (endOfWeek - startOfWeek.getTime())) * 100);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getTime() + 86400000;
+      const pMonth = Math.round(((now - startOfMonth) / (endOfMonth - startOfMonth)) * 100);
+      const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
+      const endOfYear = new Date(now.getFullYear(), 11, 31).getTime() + 86400000;
+      const pYear = Math.round(((now - startOfYear) / (endOfYear - startOfYear)) * 100);
+
+      ['Day','Week','Month','Year'].forEach((name, i) => {
+        const p = [pDay,pWeek,pMonth,pYear][i];
+        const pe = document.getElementById('countdown'+name);
+        const pf = document.getElementById('progress'+name);
+        if (pe) pe.textContent = p + '%';
+        if (pf) pf.style.width = p + '%';
+      });
+    }
+    update(); setInterval(update, 60000);
+  })();
+  </script>
+
+</aside>

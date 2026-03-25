@@ -1,0 +1,183 @@
+<% const navMenus = (settings && Array.isArray(settings.nav_menus) && settings.nav_menus.length) ? settings.nav_menus : [
+  { label: '首页', url: '/' },
+  { label: '文章归档', url: '/archive' },
+  { label: '友情链接', url: '/links' }
+]; %>
+
+<nav class="navbar" id="mainNav">
+  <div class="navbar-inner">
+    <!-- Logo -->
+    <a href="/" class="navbar-logo-wrap" title="<%= siteTitle %>">
+      <div class="logo-icon">
+        <% if (settings && settings.site_logo) { %>
+        <img src="<%= settings.site_logo %>" alt="<%= siteTitle %>" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+        <% } else { %>
+        <%= siteTitle[0] || 'B' %>
+        <% } %>
+      </div>
+      <span class="logo-text"><%= siteTitle %></span>
+    </a>
+
+    <!-- Desktop nav（动态菜单） -->
+    <nav class="navbar-nav">
+      <% navMenus.forEach(item => { %>
+        <% if (item.children && item.children.length) { %>
+        <div class="nav-dropdown">
+          <a href="<%= item.url || '#' %>" class="nav-link nav-dropdown-trigger">
+            <%= item.label %> <span style="font-size:10px;opacity:.6;">▾</span>
+          </a>
+          <div class="nav-dropdown-menu">
+            <% item.children.forEach(child => { %>
+            <a href="<%= child.url %>" class="nav-dropdown-item"><%= child.label %></a>
+            <% }) %>
+          </div>
+        </div>
+        <% } else { %>
+        <a href="<%= item.url %>" class="nav-link <%= typeof req !== 'undefined' && req.path === item.url ? 'active' : '' %>">
+          <%= item.label %>
+        </a>
+        <% } %>
+      <% }) %>
+    </nav>
+
+    <!-- Right: search + theme + menu -->
+    <div class="navbar-right">
+      <!-- Desktop search -->
+      <form class="navbar-search" action="/search" method="get">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" name="q" placeholder="搜索文章…"
+          value="<%= typeof keyword !== 'undefined' ? keyword : '' %>">
+      </form>
+
+      <!-- Mobile search button -->
+      <button title="搜索" aria-label="搜索" id="searchBtn" class="navbar-search-btn">🔎</button>
+
+      <!-- 暗黑模式切换 -->
+      <button class="theme-toggle-btn" onclick="toggleTheme()" title="切换主题">🌙</button>
+
+      <!-- Mobile menu button -->
+      <button class="navbar-menu-btn" id="menuBtn" onclick="openDrawer()">☰</button>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Drawer -->
+<div class="mobile-drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="mobile-drawer" id="mobileDrawer">
+  <div class="mobile-drawer-header">
+    <a href="/" class="mobile-drawer-brand">
+      <div class="logo-icon mobile-drawer-logo">
+        <% if (settings && settings.site_logo) { %>
+        <img src="<%= settings.site_logo %>" alt="<%= siteTitle %>" class="mobile-drawer-logo-img">
+        <% } else { %>
+        <%= siteTitle[0] || 'B' %>
+        <% } %>
+      </div>
+      <span class="mobile-drawer-brand-title"><%= siteTitle %></span>
+    </a>
+    <div class="mobile-drawer-actions">
+      <button class="theme-toggle-btn" onclick="toggleTheme()" title="切换主题" aria-label="切换主题">🌙</button>
+      <button class="mobile-drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+  </div>
+  <nav class="mobile-drawer-nav">
+    <% navMenus.forEach(item => { %>
+    <a href="<%= item.url %>" class="nav-link mobile-drawer-link <%= typeof req !== 'undefined' && req.path === item.url ? 'active' : '' %>">
+      <%= item.label %>
+    </a>
+    <% if (item.children && item.children.length) { %>
+      <% item.children.forEach(child => { %>
+      <a href="<%= child.url %>" class="nav-link mobile-drawer-link mobile-drawer-link-child <%= typeof req !== 'undefined' && req.path === child.url ? 'active' : '' %>">
+        └ <%= child.label %>
+      </a>
+      <% }) %>
+    <% } %>
+    <% }) %>
+  </nav>
+</div>
+
+<!-- Mobile Search Overlay -->
+<div class="search-overlay" id="searchOverlay" aria-hidden="true">
+  <div class="search-overlay-bar">
+    <form class="search-overlay-field" action="/search" method="get" style="flex:1;">
+      <span aria-hidden="true">🔎</span>
+      <input id="searchOverlayInput" class="search-overlay-input" type="text" name="q" placeholder="搜索文章、标签、分类…" autocomplete="off">
+    </form>
+    <div class="search-overlay-cancel" role="button" tabindex="0" id="searchCancelBtn">取消</div>
+  </div>
+  <div class="search-overlay-body">
+    <div class="search-hint">
+      <div class="search-hint-icon">🔎</div>
+      <div class="search-hint-text">输入关键词开始搜索</div>
+    </div>
+  </div>
+  </div>
+
+<!-- Mobile Bottom Tab Bar -->
+<div class="tab-bar">
+  <a href="/" class="tab-item <%= typeof req !== 'undefined' && req.path === '/' ? 'active' : '' %>" id="tab-home">
+    <span class="tab-icon">🏠</span>
+    <span class="tab-label">首页</span>
+  </a>
+  <a href="/archive" class="tab-item <%= typeof req !== 'undefined' && req.path === '/archive' ? 'active' : '' %>" id="tab-archive">
+    <span class="tab-icon">📚</span>
+    <span class="tab-label">归档</span>
+  </a>
+  <a href="/category/all" class="tab-item <%= typeof req !== 'undefined' && req.path && req.path.startsWith('/category') ? 'active' : '' %>" id="tab-category">
+    <span class="tab-icon">🗂️</span>
+    <span class="tab-label">分类</span>
+  </a>
+  <a href="/links" class="tab-item <%= typeof req !== 'undefined' && req.path === '/links' ? 'active' : '' %>" id="tab-links">
+    <span class="tab-icon">🔗</span>
+    <span class="tab-label">友链</span>
+  </a>
+</div>
+
+<script>
+function openDrawer()  { document.getElementById('mobileDrawer').classList.add('open');document.getElementById('drawerOverlay').classList.add('open');document.body.style.overflow='hidden'; }
+function closeDrawer() { document.getElementById('mobileDrawer').classList.remove('open');document.getElementById('drawerOverlay').classList.remove('open');document.body.style.overflow=''; }
+window.addEventListener('scroll', function() {
+  document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 8);
+}, { passive: true });
+
+// 初始化主题按钮图标
+(function() {
+  const theme = localStorage.getItem('theme') || 'light';
+  document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+    btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  });
+})();
+
+// Mobile search overlay interactions
+(function() {
+  const overlay = document.getElementById('searchOverlay');
+  const input = document.getElementById('searchOverlayInput');
+  const cancel = document.getElementById('searchCancelBtn');
+  const openBtn = document.getElementById('searchBtn');
+
+  function openSearchOverlay() {
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => { input && input.focus(); }, 50);
+  }
+  function closeSearchOverlay() {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  window.openSearchOverlay = openSearchOverlay;
+  window.closeSearchOverlay = closeSearchOverlay;
+
+  if (openBtn) openBtn.addEventListener('click', openSearchOverlay);
+  if (cancel) {
+    cancel.addEventListener('click', closeSearchOverlay);
+    cancel.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeSearchOverlay(); } });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closeSearchOverlay();
+  });
+})();
+</script>

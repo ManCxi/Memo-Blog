@@ -1,0 +1,33 @@
+{
+  "name": "memo-blog",
+  "version": "1.0.0",
+  "description": "Node.js + Express + EJS + Sequelize(多数据库) + Redis 博客系统",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "init": "node init.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "connect-redis": "^7.1.1",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "ioredis": "^5.3.2",
+    "marked": "^12.0.0",
+    "method-override": "^3.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.9.7",
+    "pg": "^8.11.5",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.3",
+    "slugify": "^1.6.6",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

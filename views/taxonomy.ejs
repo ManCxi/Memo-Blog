@@ -1,0 +1,60 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<main class="page-container animate-fade-in-up">
+  <div class="archive-modern-shell">
+    <div class="archive-hero-card">
+      <div class="archive-hero-head">
+        <div class="archive-hero-emoji"><%= taxonomyType === 'category' ? '🗂️' : '🏷️' %></div>
+        <h1 class="archive-hero-title"><%= taxonomyType === 'category' ? '' : '# ' %><%= taxonomyName %></h1>
+      </div>
+      <p class="archive-hero-sub">
+        <% if (typeof taxonomyDesc !== 'undefined' && taxonomyDesc) { %><%= taxonomyDesc %> · <% } %>共收录 <strong><%= total %></strong> 篇文章
+      </p>
+      <% if (taxonomyType === 'category' && typeof sidebar !== 'undefined' && sidebar && sidebar.categories && sidebar.categories.length) { %>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+          <a href="/category/all" class="tag-chip-filter <%= taxonomySlug === 'all' ? 'active' : '' %>">全部分类</a>
+          <% sidebar.categories.forEach(cat => { %>
+          <a href="/category/<%= cat.slug %>" class="tag-chip-filter <%= taxonomySlug === cat.slug ? 'active' : '' %>"><%= cat.name %></a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (articles.length === 0) { %>
+      <div class="archive-match-empty">该<%= taxonomyType === 'category' ? '分类' : '标签' %>暂无文章</div>
+    <% } else { %>
+      <% articles.forEach(article => { %>
+      <a href="/article/<%= article.slug %>" class="article-row">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+          <% if (article.category) { %>
+          <span class="badge-category"><%= article.category.name %></span>
+          <% } %>
+          <% if (article.tags) { article.tags.slice(0,2).forEach(t => { %>
+          <span class="badge-tag"># <%= t.name %></span>
+          <% }) } %>
+        </div>
+        <h2 class="article-row-title"><%= article.title %></h2>
+        <p class="article-row-summary"><%= article.summary ? article.summary.slice(0,150) : '' %></p>
+        <div class="article-row-meta">
+          <span>📅 <%= new Date(article.publishedAt).toLocaleDateString('zh-CN') %></span>
+          <span>👁️ <%= article.views || 0 %></span>
+          <span style="margin-left:auto;color:var(--accent);font-weight:600;font-size:13px;">阅读 →</span>
+        </div>
+      </a>
+      <% }) %>
+    <% } %>
+
+    <% if (totalPages > 1) { %>
+      <div class="pagination">
+        <a href="?page=<%= currentPage - 1 %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">‹</a>
+        <% for (let i = 1; i <= totalPages; i++) { %>
+        <a href="?page=<%= i %>" class="page-btn <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+        <% } %>
+        <a href="?page=<%= currentPage + 1 %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">›</a>
+      </div>
+    <% } %>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

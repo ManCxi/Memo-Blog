@@ -1,0 +1,191 @@
+<%- include('../partials/layout-head', { activePage: 'settings' }) %>
+<link rel="stylesheet" href="/libs/flatpickr/flatpickr.min.css">
+<style>
+/* Flatpickr Theme Customization */
+.flatpickr-calendar {
+  background: var(--surface-1-bg);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--surface-shadow-1);
+  border-radius: 16px;
+  font-family: inherit;
+  overflow: hidden;
+}
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, .flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover, .flatpickr-day.selected.prevMonthDay, .flatpickr-day.startRange.prevMonthDay, .flatpickr-day.endRange.prevMonthDay, .flatpickr-day.selected.nextMonthDay, .flatpickr-day.startRange.nextMonthDay, .flatpickr-day.endRange.nextMonthDay {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.flatpickr-day.today {
+  border-color: var(--accent-light);
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+  background: var(--surface-hover);
+}
+.flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after {
+  border-bottom-color: var(--surface-border);
+}
+[data-theme="dark"] .flatpickr-calendar {
+  background: var(--surface-1-bg);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .flatpickr-day, [data-theme="dark"] .flatpickr-weekday, [data-theme="dark"] .flatpickr-current-month, [data-theme="dark"] span.flatpickr-weekday {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .flatpickr-day:hover {
+  background: var(--surface-hover);
+}
+[data-theme="dark"] .flatpickr-months .flatpickr-prev-month, [data-theme="dark"] .flatpickr-months .flatpickr-next-month {
+  color: var(--text-primary);
+  fill: var(--text-primary);
+}
+[data-theme="dark"] .numInputWrapper span.arrowUp:after {
+  border-bottom-color: var(--text-primary);
+}
+[data-theme="dark"] .numInputWrapper span.arrowDown:after {
+  border-top-color: var(--text-primary);
+}
+[data-theme="dark"] .flatpickr-day.flatpickr-disabled, [data-theme="dark"] .flatpickr-day.flatpickr-disabled:hover {
+  color: var(--text-tertiary);
+}
+/* Ensure entire input area is clickable */
+.flatpickr-input {
+  cursor: pointer;
+}
+/* Ensure picker is on top and has its shadow preserved */
+.flatpickr-calendar.static {
+  top: 100% !important;
+  left: auto !important;
+  right: 0 !important;
+  z-index: 999;
+}
+</style>
+
+<div class="page-header"><h1 class="page-title">站点信息</h1></div>
+
+<!-- ── Tab 1：站点信息 ── -->
+<div class="settings-panel active" id="tab-site">
+  <form method="POST" action="/admin/settings" id="siteForm" style="max-width: 1000px;">
+    <input type="hidden" name="_method" value="POST">
+
+    <span class="settings-group-title">基本信息</span>
+    <div class="settings-group" style="overflow: visible;">
+      <div class="settings-row">
+        <div class="settings-label">站点名称</div>
+        <div class="settings-control">
+          <input type="text" name="site_name" class="form-control" value="<%= typeof settings.site_name === 'string' ? settings.site_name : (settings.site_name || '') %>">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">站点 URL</div>
+        <div class="settings-control">
+          <input type="url" name="site_url" class="form-control" value="<%= settings.site_url || '' %>" placeholder="https://example.com">
+        </div>
+      </div>
+      <div class="settings-row-col">
+        <div class="settings-label">站点描述</div>
+        <input type="text" name="site_description" class="form-control" value="<%= settings.site_description || '' %>" placeholder="简短的一句话描述">
+      </div>
+      <div class="settings-row-col">
+        <div class="settings-label">站点关键词</div>
+        <input type="text" name="site_keywords" class="form-control" value="<%= settings.site_keywords || '' %>" placeholder="关键词1,关键词2">
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Logo 图片 URL</div>
+        <div class="settings-control">
+          <input type="text" name="site_logo" id="siteLogoInput" class="form-control" value="<%= settings.site_logo || '' %>" placeholder="/uploads/logo.png">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openAttachmentPicker(url => { document.getElementById('siteLogoInput').value = url; }, {accept:'image'})">选择</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">运行开始时间</div>
+        <div class="settings-control">
+          <input type="text" name="run_since" id="run_since" class="form-control" value="<%= settings.run_since || '' %>" placeholder="选择日期">
+        </div>
+      </div>
+    </div>
+
+    <span class="settings-group-title">版权 &amp; 备案</span>
+    <div class="settings-group">
+      <div class="settings-row-col">
+        <div class="settings-label">版权声明</div>
+        <input type="text" name="copyright" class="form-control" value="<%= settings.copyright || '' %>" placeholder="© 2024 MySite">
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">ICP 备案号</div>
+        <div class="settings-control">
+          <input type="text" name="icp" class="form-control" value="<%= settings.icp || '' %>" placeholder="京ICP备...">
+        </div>
+      </div>
+    </div>
+
+    <span class="settings-group-title">搜索引擎验证</span>
+    <div class="settings-group">
+      <div class="settings-row">
+        <div class="settings-label">Google 验证码</div>
+        <div class="settings-control">
+          <input type="text" name="google_site_verification" class="form-control" value="<%= settings.google_site_verification || '' %>" placeholder="未设置">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Bing 验证码</div>
+        <div class="settings-control">
+          <input type="text" name="bing_site_verification" class="form-control" value="<%= settings.bing_site_verification || '' %>" placeholder="未设置">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">百度验证码</div>
+        <div class="settings-control">
+          <input type="text" name="baidu_site_verification" class="form-control" value="<%= settings.baidu_site_verification || '' %>" placeholder="未设置">
+        </div>
+      </div>
+    </div>
+
+    <span class="settings-group-title">自定义 Head 代码</span>
+    <div class="settings-group">
+      <div class="settings-row-col">
+        <div class="settings-label">
+          注入到 &lt;head&gt; 的代码
+          <span class="settings-desc">支持添加统计脚本、自定义样式等</span>
+        </div>
+        <textarea name="head_code" class="form-control" rows="6" style="font-family: var(--font-mono); font-size: 13px;" placeholder="<script>...</script>"><%= settings.head_code || '' %></textarea>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">保存站点设置</button>
+    </div>
+  </form>
+</div>
+
+
+<script src="/libs/flatpickr/flatpickr.js"></script>
+<script src="/libs/flatpickr/l10n/zh.js"></script>
+<script>
+// 初始化 Flatpickr
+flatpickr("#run_since", {
+  locale: "zh",
+  dateFormat: "Y-m-d",
+  disableMobile: "true",
+  allowInput: true,
+  static: true,
+  monthSelectorType: "static"
+});
+
+// ── 工具 ──
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// 保存成功提示
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('saved')) showToast('设置已保存');
+if (urlParams.get('error')) showToast('保存失败，请重试', 'error');
+</script>
+
+<%- include('../partials/layout-foot') %>

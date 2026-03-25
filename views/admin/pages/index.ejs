@@ -1,0 +1,145 @@
+<%- include('../partials/layout-head', { activePage: 'pages' }) %>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+  <form method="get" style="display:contents;">
+    <div class="filter-group">
+      <label>关键词</label>
+      <input type="text" name="keyword" class="form-control form-control-sm"
+        placeholder="搜索页面标题…" value="<%= keyword %>" style="min-width:160px;">
+    </div>
+    <div style="display:flex;gap:6px;align-items:flex-end;">
+      <button type="submit" class="btn btn-primary btn-sm">🔍 筛选</button>
+      <a href="/admin/pages" class="btn btn-secondary btn-sm">重置</a>
+    </div>
+  </form>
+</div>
+
+<!-- Header row -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+  <span class="text-sm text-tertiary">共 <strong style="color:var(--text-primary);"><%= total %></strong> 个页面</span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="/admin/pages/create" class="btn btn-primary btn-sm">📄 新建页面</a>
+  </div>
+</div>
+
+<!-- Table card -->
+<div class="table-card">
+  <div class="table-responsive-wrap">
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:40%">标题</th>
+            <th>Slug</th>
+            <th>状态</th>
+            <th>阅读</th>
+            <th>创建时间</th>
+            <th class="actions-col">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (pages.length === 0) { %>
+          <tr><td colspan="6" class="table-empty">暂无独立页面，<a href="/admin/pages/create" style="color:var(--accent);">去创建一个</a></td></tr>
+          <% } %>
+          <% pages.forEach(item => { %>
+          <tr>
+            <td>
+              <div style="font-weight:600;">
+                <a href="/p/<%= item.slug %>" target="_blank"
+                  style="color:var(--text-primary);text-decoration:none;transition:color .15s;"
+                  onmouseover="this.style.color='var(--accent)'"
+                  onmouseout="this.style.color='var(--text-primary)'">
+                  <%= item.title %>
+                </a>
+              </div>
+            </td>
+            <td class="text-tertiary text-sm"><%= item.slug %></td>
+            <td>
+              <span class="status-badge <%= item.status === 'published' ? 'status-published' : 'status-draft' %>">
+                <%= item.status === 'published' ? '显示' : '隐藏' %>
+              </span>
+            </td>
+            <td class="text-tertiary text-sm">👁️ <%= item.views || 0 %></td>
+            <td class="text-tertiary text-sm" style="white-space:nowrap;">
+              <%= new Date(item.createdAt).toLocaleDateString('zh-CN') %>
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;">
+                <a href="/admin/pages/<%= item.id %>/edit" class="btn btn-edit btn-sm">✏️</a>
+                <form action="/admin/pages/<%= item.id %>?_method=DELETE" method="POST" style="display:inline;"
+                  onsubmit="return deletePage(event, <%= item.id %>, '<%= item.title %>')">
+                  <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile card list -->
+    <div class="mobile-card-list">
+      <% if (pages.length === 0) { %>
+      <div class="table-empty">暂无独立页面</div>
+      <% } %>
+      <% pages.forEach(item => { %>
+      <div class="mobile-list-item">
+        <div class="mobile-list-item-title">
+          <a href="/p/<%= item.slug %>" target="_blank" style="color:var(--text-primary);">
+            <%= item.title %>
+          </a>
+        </div>
+        <div class="mobile-list-item-meta">
+          <span class="status-badge <%= item.status === 'published' ? 'status-published' : 'status-draft' %>">
+            <%= item.status === 'published' ? '显示' : '隐藏' %>
+          </span>
+          <span><code><%= item.slug %></code></span>
+          <span>👁️ <%= item.views || 0 %></span>
+          <span><%= new Date(item.createdAt).toLocaleDateString('zh-CN') %></span>
+        </div>
+        <div class="mobile-list-item-actions">
+          <a href="/admin/pages/<%= item.id %>/edit" class="btn btn-edit btn-sm">✏️ 编辑</a>
+          <button type="button" class="btn btn-danger btn-sm" onclick="deletePage(event, <%= item.id %>, '<%= item.title %>')">🗑️ 删除</button>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+<% if (totalPages > 1) { %>
+<div class="pagination">
+  <a href="?page=<%= currentPage-1 %>&keyword=<%= keyword %>"
+    class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">‹</a>
+  <% for (let i = 1; i <= totalPages; i++) { %>
+  <a href="?page=<%= i %>&keyword=<%= keyword %>"
+    class="page-btn <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+  <% } %>
+  <a href="?page=<%= currentPage+1 %>&keyword=<%= keyword %>"
+    class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">›</a>
+</div>
+<% } %>
+
+<script>
+async function deletePage(e, id, title) {
+  if (e.type === 'submit') e.preventDefault();
+  if (!confirm(`确定删除页面「${title}」吗？`)) return;
+  
+  try {
+    const r = await fetch('/admin/pages/' + id, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.ok) {
+      location.reload();
+    } else {
+      alert(d.message || '删除失败');
+    }
+  } catch (err) {
+    alert('网络错误');
+  }
+}
+</script>
+
+<%- include('../partials/layout-foot') %>

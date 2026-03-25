@@ -1,0 +1,111 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<main class="page-container animate-fade-in-up">
+  <div class="links-shell">
+    <!-- Hero -->
+    <div class="archive-hero-card" style="margin-bottom: var(--space-xl);">
+      <div class="archive-hero-head">
+        <div class="archive-hero-emoji">🔗</div>
+        <h1 class="archive-hero-title">友情链接</h1>
+      </div>
+      <p class="archive-hero-sub">志同道合的朋友们，互相发现，共同进步。</p>
+    </div>
+
+    <%
+      const demoLinks = [
+        { name:'逝者为人风度', url:'https://ru-macro.cn', avatar:'', description:'运维与 Linux 记录，认真写作，持续更新。' },
+        { name:'前端社区', url:'https://fe.example.com', avatar:'', description:'现代前端技术分享与实践。' },
+        { name:'程序人生', url:'https://coder.life', avatar:'', description:'技术与生活的交汇处。' },
+        { name:'设计导航', url:'https://design.nav', avatar:'', description:'灵感、设计与前端动效集合。' },
+        { name:'开源之友', url:'https://oss.friend', avatar:'', description:'关注开源，热爱分享。' }
+      ];
+      const list = (Array.isArray(links) && links.length) ? links : demoLinks;
+    %>
+      <div class="section-header">
+        <h2 class="section-title">精选友链</h2>
+        <span class="badge badge-gray">共 <%= list.length %> 个</span>
+      </div>
+      <div class="links-grid">
+        <%
+        const GRADIENTS = [
+          'linear-gradient(135deg,#667eea,#764ba2)',
+          'linear-gradient(135deg,#f093fb,#f5576c)',
+          'linear-gradient(135deg,#4facfe,#00f2fe)',
+          'linear-gradient(135deg,#43e97b,#38f9d7)',
+          'linear-gradient(135deg,#fa709a,#fee140)',
+          'linear-gradient(135deg,#30cfd0,#330867)',
+          'linear-gradient(135deg,#a8edea,#fed6e3)',
+          'linear-gradient(135deg,#ffecd2,#fcb69f)',
+          'linear-gradient(135deg,#89f7fe,#66a6ff)'
+        ];
+        %>
+        <% list.forEach((link, i) => { %>
+        <a href="<%= link.url %>" target="_blank" rel="noopener noreferrer" class="link-card">
+          <% if (link.avatar) { %>
+          <div class="link-avatar">
+            <img src="<%= link.avatar %>" alt="<%= link.name %>" loading="lazy">
+          </div>
+          <% } else { %>
+          <div class="link-avatar-placeholder" style="background:<%= GRADIENTS[i % GRADIENTS.length] %>;"><%= link.name ? link.name[0] : '?' %></div>
+          <% } %>
+          <div class="link-name"><%= link.name %></div>
+          <% if (link.description) { %>
+          <div class="link-desc"><%= link.description %></div>
+          <% } %>
+          <div class="link-url">🌐 <%= (link.url || '').replace(/^https?:\/\//, '').replace(/\/$/, '') %></div>
+        </a>
+        <% }) %>
+      </div>
+
+      <!-- 申请友链区块 -->
+      <div class="apply-section">
+        <div>
+          <div class="apply-section-title">💌 申请友情链接</div>
+          <div class="apply-section-desc">欢迎互换友链！请确保您的博客持续更新，内容积极向上。</div>
+        </div>
+        <a href="mailto:<%= (settings && settings.blogger_info && settings.blogger_info.email) || 'admin@example.com' %>" class="apply-btn">立即申请</a>
+      </div>
+
+      <!-- 申请须知 -->
+      <div class="links-apply-card">
+        <h3>申请须知</h3>
+        <div class="links-feature-grid">
+          <div class="links-feature-item">
+            <span style="font-size:20px;flex-shrink:0;">✅</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:3px;">稳定运行</div>
+              <div style="font-size:13px;color:var(--text-secondary);">网站稳定访问，无广告弹窗</div>
+            </div>
+          </div>
+          <div class="links-feature-item">
+            <span style="font-size:20px;flex-shrink:0;">📝</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:3px;">持续更新</div>
+              <div style="font-size:13px;color:var(--text-secondary);">有原创内容，定期更新博文</div>
+            </div>
+          </div>
+          <div class="links-feature-item">
+            <span style="font-size:20px;flex-shrink:0;">🤝</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:3px;">先行添加</div>
+              <div style="font-size:13px;color:var(--text-secondary);">请先在贵站添加本站链接</div>
+            </div>
+          </div>
+          <div class="links-feature-item">
+            <span style="font-size:20px;flex-shrink:0;">💬</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:3px;">留言申请</div>
+              <div style="font-size:13px;color:var(--text-secondary);">通过邮件提交申请信息</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:var(--space-lg);padding-top:var(--space-md);border-top:1px solid var(--surface-border);font-size:13px;color:var(--text-secondary);">
+          <strong style="color:var(--text-primary);">本站信息：</strong>
+          名称 <%= siteTitle %> · 地址 <%= (settings && settings.site_url) || 'http://localhost:3000' %>
+        </div>
+      </div>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

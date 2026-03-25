@@ -1,0 +1,154 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<main class="page-container animate-fade-in-up">
+<div class="home-layout">
+<% if (flash.success) { %>
+  <div class="flash flash-success">✅ <%= flash.success %></div>
+  <% } %>
+    <!-- Left: article list -->
+    <div style="min-width:0;">
+      <% const carouselItems = (settings && Array.isArray(settings.carousel_items)) ? settings.carousel_items.filter(c => c.title || c.image) : []; %>
+      <% if (carouselItems.length > 0) { %>
+      <!-- 首页轮播图 -->
+      <div class="home-carousel" id="homeCarousel" style="margin-bottom:24px;">
+        <div class="carousel-track" id="carouselTrack">
+          <% carouselItems.forEach((item, i) => { %>
+          <div class="carousel-slide <%= i === 0 ? 'active' : '' %>"
+            style="<%= item.image ? `background-image:url('${item.image}');` : `background:linear-gradient(135deg,var(--accent),var(--accent-light));` %>">
+            <% if (item.url) { %>
+            <a href="<%= item.url %>" class="carousel-full-link">
+            <% } %>
+              <div class="carousel-overlay"></div>
+              <div class="carousel-content">
+                <div class="carousel-title"><%= item.title || '' %></div>
+                <% if (item.subtitle) { %>
+                <div class="carousel-subtitle"><%= item.subtitle %></div>
+                <% } %>
+                <% if (item.url) { %>
+                <div class="carousel-btn">阅读全文 →</div>
+                <% } %>
+              </div>
+            <% if (item.url) { %>
+            </a>
+            <% } %>
+          </div>
+          <% }) %>
+        </div>
+        <% if (carouselItems.length > 1) { %>
+        <button class="carousel-arrow carousel-prev" onclick="carouselMove(-1)">‹</button>
+        <button class="carousel-arrow carousel-next" onclick="carouselMove(1)">›</button>
+        <div class="carousel-dots" id="carouselDots">
+          <% carouselItems.forEach((_, i) => { %>
+          <span class="carousel-dot <%= i === 0 ? 'active' : '' %>" onclick="carouselGoTo(<%= i %>)"></span>
+          <% }) %>
+        </div>
+        <% } %>
+      </div>
+      <script>
+      (function() {
+        let cur = 0;
+        const slides = document.querySelectorAll('.carousel-slide');
+        const dots = document.querySelectorAll('.carousel-dot');
+        const total = slides.length;
+        let timer = setInterval(() => carouselMove(1), 5000);
+
+        window.carouselGoTo = function(i) {
+          slides[cur].classList.remove('active');
+          if (dots[cur]) dots[cur].classList.remove('active');
+          cur = (i + total) % total;
+          slides[cur].classList.add('active');
+          if (dots[cur]) dots[cur].classList.add('active');
+          clearInterval(timer);
+          timer = setInterval(() => carouselMove(1), 5000);
+        };
+        window.carouselMove = function(dir) { carouselGoTo(cur + dir); };
+      })();
+      </script>
+      <% } %>
+
+      <!-- Section header -->
+      <div class="section-header" style="margin-top:20px; margin-bottom:16px; border-left:4px solid #ff5722; padding-left:12px;">
+        <h2 class="section-title" style="margin:0; font-size:18px; font-weight: 800;">最新文章</h2>
+        <a href="/archive" class="section-more" style="color:#ff5722; font-size:14px; font-weight:600;">全部文章 →</a>
+      </div>
+
+      <%
+      const demoArticles = [
+        { id: 1, slug: 'linux-lvm-guide', title: 'Linux LVM 磁盘管理详解', summary: '从零到一掌握 LVM 的原理、分区、扩容与快照。', views: 120, createdAt: new Date(), category: { name: 'Linux教程', slug: 'linux-tutorial' }, tags: [{name:'Linux',slug:'linux'},{name:'存储',slug:'storage'}], cover: '' },
+        { id: 2, slug: 'iptables-primer', title: 'iptables 入门到实践：18 条命令掌控 Linux 防火墙', summary: '常见场景规则清单与调试思路，轻松搞定网络访问控制。', views: 96, createdAt: new Date(), category: { name: 'Linux教程', slug: 'linux-tutorial' }, tags: [{name:'Linux',slug:'linux'},{name:'安全',slug:'security'}], cover: '' },
+        { id: 3, slug: 'linux-permission', title: 'Linux 权限模型全解：从基本位到 ACL', summary: '文件权限、用户/用户组、ACL 与常见坑位，一次讲透。', views: 88, createdAt: new Date(), category: { name: 'Linux教程', slug: 'linux-tutorial' }, tags: [{name:'Linux',slug:'linux'}], cover: '' },
+        { id: 4, slug: 'shell-tricks', title: 'Shell 提效技巧：管道、重定向与常用组合', summary: '用小技巧提升日常效率，实战范例上手即用。', views: 75, createdAt: new Date(), category: { name: '实践', slug: 'practice' }, tags: [{name:'Shell',slug:'shell'},{name:'效率',slug:'productivity'}], cover: '' }
+      ];
+      const list = (Array.isArray(articles) && articles.length) ? articles : demoArticles;
+      %>
+      <div class="article-grid">
+        <%
+        const GRADIENTS = [
+          'linear-gradient(135deg,#667eea,#764ba2)',
+          'linear-gradient(135deg,#f093fb,#f5576c)',
+          'linear-gradient(135deg,#4facfe,#00f2fe)',
+          'linear-gradient(135deg,#43e97b,#38f9d7)',
+          'linear-gradient(135deg,#fa709a,#fee140)',
+          'linear-gradient(135deg,#30cfd0,#330867)',
+          'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+          'linear-gradient(135deg,#ffecd2,#fcb69f)',
+        ];
+        const EMOJIS = ['🚀','🎨','⚡','🤖','🗄️','🌙','📦','🔧','🎯','💡'];
+        %>
+        <% list.forEach(article => { %>
+        <a href="/article/<%= article.slug %>" class="article-card">
+          <div class="article-card-cover">
+            <% if (article.pinned) { %>
+            <div style="position:absolute; top:12px; left:-28px; background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:4px 30px; transform:rotate(-45deg); box-shadow:0 2px 4px rgba(255,107,53,0.3); z-index:10; letter-spacing:1px;">置顶</div>
+            <% } %>
+            <% if (article.cover) { %>
+            <img src="<%= article.cover %>" alt="<%= article.title %>" loading="lazy">
+            <% } else { %>
+            <div class="article-card-cover-placeholder"
+              style="background:<%= GRADIENTS[article.id % GRADIENTS.length] %>;">
+              <span style="font-size: 3rem;"><%= EMOJIS[article.id % EMOJIS.length] %></span>
+            </div>
+            <% } %>
+          </div>
+          <div class="article-card-body">
+            <div class="article-card-badges">
+              <% if (article.category) { %>
+              <span class="badge-category"><%= article.category.name %></span>
+              <% } %>
+              <% if (article.tags) { article.tags.slice(0,2).forEach(tag => { %>
+              <span class="badge-tag"><%= tag.name %></span>
+              <% }) } %>
+            </div>
+            <h2 class="article-card-title"><%= article.title %></h2>
+            <p class="article-card-summary"><%= article.summary ? article.summary.slice(0, 120) : '' %></p>
+            <div class="article-card-footer">
+              <div class="article-card-meta">
+                <span>📅 <%= new Date(article.publishedAt).toLocaleDateString('zh-CN') %></span>
+                <span>👁️ <%= article.views || 0 %></span>
+              </div>
+              <span class="article-card-read" style="color:#ff5722; font-size:13px;">阅读 →</span>
+            </div>
+          </div>
+        </a>
+        <% }) %>
+      </div>
+
+      <!-- Pagination -->
+      <% if ((Array.isArray(articles) && articles.length) && totalPages > 1) { %>
+      <div class="pagination">
+        <a href="?page=<%= currentPage - 1 %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">‹</a>
+        <% for (let i = 1; i <= totalPages; i++) { %>
+        <a href="?page=<%= i %>" class="page-btn <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+        <% } %>
+        <a href="?page=<%= currentPage + 1 %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">›</a>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Right: sidebar -->
+    <%- include('partials/sidebar') %>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,98 @@
+<% const activePage = 'settings-carousel' %>
+<%- include('../partials/layout-head') %>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px;">
+  <h1 class="page-title" style="margin: 0;">轮播图</h1>
+  <button type="button" class="btn btn-primary" onclick="addCarouselItem()" style="border-radius: 99px; padding: 6px 16px; font-size: 13px;">
+    + 添加轮播项
+  </button>
+</div>
+
+<div id="carouselList" class="settings-group" style="max-width: 1000px;"></div>
+
+<div style="margin-bottom: 24px; max-width: 1000px;">
+  <button type="button" class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="saveCarousel()">保存轮播设置</button>
+</div>
+
+<script>
+const carouselItems = <%- JSON.stringify(settings.carousel_items || []) %>;
+const articles = <%- JSON.stringify(typeof articles !== "undefined" ? articles : []) %>;
+function renderCarousel(){
+  const list = document.getElementById('carouselList');
+  if (!carouselItems.length) { list.innerHTML = '<div class="settings-row"><div class="settings-label" style="width: 100%; text-align: center; justify-content: center; color: var(--text-tertiary); font-weight: 400; padding: 20px 0;">暂无轮播项，点击右上角「添加」创建</div></div>'; return; }
+  
+  const articleOptions = `<option value="">-- 一键关联已有文章 --</option>` +
+    articles.map(a => `<option value="/article/${a.slug}" data-title="${escHtml(a.title||'')}" data-summary="${escHtml(a.summary||'')}" data-cover="${escHtml(a.cover||'')}">📄 ${escHtml(a.title)}</option>`).join('');
+
+  list.innerHTML = carouselItems.map((item,i)=>`
+    <div class="settings-row-col" style="padding-bottom: 20px;">
+      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--text-secondary);">轮播项 #${i + 1}</span>
+        <button type="button" class="btn btn-danger btn-sm" style="padding: 4px 10px; font-size: 12px; border-radius: 8px;" onclick="removeCarouselItem(${i})">删除</button>
+      </div>
+      <div class="form-grid" style="gap: 12px;">
+        <div style="grid-column: 1/-1; display:flex; gap:8px;">
+          <select class="form-control" style="width:auto; max-width:300px;" onchange="selectArticle(${i}, this)">
+            ${articleOptions}
+          </select>
+          <span style="color:var(--text-tertiary); font-size:12px; display:flex; align-items:center;">选择后自动填充下方未设置信息</span>
+        </div>
+        <div style="grid-column: 1/-1;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">背景图片</label>
+          <div style="display:flex; gap: 8px;">
+            <input type="text" id="carouselImg${i}" class="form-control" value="${escHtml(item.image||'')}" placeholder="/uploads/..." onchange="carouselItems[${i}].image=this.value">
+            <button type="button" class="btn btn-secondary" style="border-radius: 12px;" onclick="openCarouselMediaPicker(${i})">选图</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">标题</label>
+          <input type="text" class="form-control" value="${escHtml(item.title||'')}" placeholder="主标题" onchange="carouselItems[${i}].title=this.value">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">副标题</label>
+          <input type="text" class="form-control" value="${escHtml(item.subtitle||'')}" placeholder="副标题" onchange="carouselItems[${i}].subtitle=this.value">
+        </div>
+        <div style="grid-column: 1/-1;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">链接 URL</label>
+          <input type="text" class="form-control" value="${escHtml(item.url||'')}" placeholder="/posts/..." onchange="carouselItems[${i}].url=this.value">
+        </div>
+      </div>
+    </div>`).join('');
+}
+function addCarouselItem(){ carouselItems.push({ title:'', subtitle:'', url:'', image:'' }); renderCarousel(); }
+function removeCarouselItem(i){ carouselItems.splice(i,1); renderCarousel(); }
+async function saveCarousel(){
+  const resp = await fetch('/admin/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ carousel_items: carouselItems }) });
+  const data = await resp.json(); showToast(data.ok?'已保存':'保存失败', data.ok?'success':'error');
+}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function selectArticle(index, selectEl) {
+  const option = selectEl.options[selectEl.selectedIndex];
+  if (!option.value) return;
+
+  const title = option.getAttribute('data-title');
+  const summary = option.getAttribute('data-summary');
+  const cover = option.getAttribute('data-cover');
+  const url = option.value;
+
+  if (!carouselItems[index].image && cover) carouselItems[index].image = cover;
+  if (!carouselItems[index].title && title) carouselItems[index].title = title;
+  if (!carouselItems[index].subtitle && summary) carouselItems[index].subtitle = summary;
+  if (!carouselItems[index].url && url) carouselItems[index].url = url;
+
+  renderCarousel();
+}
+
+function openCarouselMediaPicker(index) {
+  openAttachmentPicker((url) => {
+    const input = document.getElementById('carouselImg' + index);
+    if (input) input.value = url;
+    if (carouselItems[index]) {
+      carouselItems[index].image = url;
+    }
+  }, { accept: 'image' });
+}
+
+renderCarousel();
+</script>
+<%- include('../partials/layout-foot') %>

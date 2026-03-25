@@ -1,0 +1,128 @@
+<% const activePage = 'pages' %>
+<%- include('../partials/layout-head') %>
+
+<% if (typeof error !== 'undefined' && error) { %>
+<div class="flash flash-error">⚠️ <%= error %></div>
+<% } %>
+
+<form method="POST"
+  action="<%= page && page.id ? `/admin/pages/${page.id}` : '/admin/pages' %>"
+  id="pageForm" style="height: 100%; display: flex; flex-direction: column;">
+
+  <div class="article-edit-layout" style="flex: 1; height: 100%; min-height: calc(100vh - 120px);">
+    <!-- Left: main editor -->
+    <div class="article-editor-wrap" style="display: flex; flex-direction: column; height: 100%; overflow-y: auto;">
+      <!-- Title -->
+      <div class="form-section" style="padding-bottom:20px; flex-shrink: 0;">
+        <input type="text" name="title" class="form-title-input"
+          placeholder="请输入页面标题…"
+          value="<%= page ? page.title : '' %>" required>
+      </div>
+
+      <!-- Slug -->
+      <div class="form-section" style="margin-bottom: 20px; flex-shrink: 0;">
+        <label class="form-label">自定义路径 (Slug)</label>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--text-tertiary); font-size: 14px;">/p/</span>
+          <input type="text" name="slug" class="form-control"
+            placeholder="about-me"
+            value="<%= page ? page.slug : '' %>" required
+            style="flex: 1; max-width: 300px;">
+        </div>
+        <p class="settings-desc" style="margin-left: 28px;">页面 URL 将是：domain.com/p/your-slug</p>
+      </div>
+
+      <!-- Editor -->
+      <div class="form-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+        <div style="width: 100%; display: flex; flex-direction: column; flex: 1; min-height: 0; border: 1px solid var(--surface-border); border-radius: 12px; overflow: hidden; background: var(--surface-1-bg); z-index: 10;">
+          <label class="form-label" style="flex-shrink: 0; padding: 10px 10px 0 10px; margin-bottom: 0;">页面内容 <span style="font-weight:400;color:var(--text-tertiary);">（Rich Text）</span></label>
+          <!-- 工具栏 -->
+          <div id="editor-toolbar" style="border-bottom: 1px solid var(--surface-border); background: var(--surface-3-bg);"></div>
+          <!-- 编辑区 -->
+          <div id="editor-container" style="flex: 1; overflow-y: hidden; min-height: 400px;"></div>
+          <!-- 隐藏的 textarea 用于提交表单 -->
+          <textarea id="hiddenContent" name="content" style="display:none;"><%= page ? page.content : '' %></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: settings -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <!-- Submit / Actions -->
+      <div class="form-section">
+        <div class="form-section-title">操作</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button type="submit" class="btn btn-primary" style="justify-content:center;">
+            🚀 <%= page && page.id ? '保存修改' : '发布页面' %>
+          </button>
+          <a href="/admin/pages" class="btn btn-secondary" style="justify-content:center;">✕ 取消</a>
+        </div>
+      </div>
+      
+      <!-- Publish settings -->
+      <div class="form-section">
+        <div class="form-section-title">显示设置</div>
+        <div class="form-mb">
+          <label class="form-label">发布状态</label>
+          <select name="status" class="form-control form-control-sm">
+            <option value="published" <%= !page || page.status === 'published' ? 'selected' : '' %>>✅ 显示</option>
+            <option value="hidden" <%= page && page.status === 'hidden' ? 'selected' : '' %>>📄 隐藏</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    if (!window.wangEditor) return;
+    const { createEditor, createToolbar } = window.wangEditor;
+
+    const editorConfig = {
+      placeholder: '请输入页面内容...',
+      MENU_CONF: {
+        uploadImage: {
+          customUpload(file, insertFn) {
+            const fd = new FormData();
+            fd.append('file', file);
+            fetch('/admin/media/upload', { method:'POST', body:fd })
+              .then(r => r.json())
+              .then(d => {
+                if (d.ok) insertFn(d.url, d.filename, d.url);
+                else alert('上传失败: ' + d.message);
+              })
+              .catch(e => alert('上传出错: ' + e.message));
+          }
+        }
+      }
+    };
+
+    const editor = createEditor({
+      selector: '#editor-container',
+      html: document.getElementById('hiddenContent').value || '',
+      config: editorConfig,
+      mode: 'default',
+    });
+
+    editor.on('change', () => {
+      document.getElementById('hiddenContent').value = editor.getHtml();
+    });
+
+    createToolbar({
+      editor,
+      selector: '#editor-toolbar',
+      mode: 'default',
+    });
+
+    window.editor = editor;
+
+    document.getElementById('pageForm').addEventListener('submit', function() {
+      document.getElementById('hiddenContent').value = editor.getHtml();
+    });
+  }, 100);
+});
+</script>
+
+<%- include('../partials/layout-foot') %>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - <%= siteTitle %></title>
+  <meta name="description" content="<%= typeof pageDescription !== 'undefined' ? pageDescription : siteDescription %>">
+  <meta name="keywords" content="<%= siteKeywords %>">
+
+  <%- include('./favicon') %>
+
+  <!-- SEO：搜索引擎验证 -->
+  <% if (settings && settings.google_site_verification) { %>
+  <meta name="google-site-verification" content="<%= settings.google_site_verification %>">
+  <% } %>
+  <% if (settings && settings.bing_site_verification) { %>
+  <meta name="msvalidate.01" content="<%= settings.bing_site_verification %>">
+  <% } %>
+  <% if (settings && settings.baidu_site_verification) { %>
+  <meta name="baidu-site-verification" content="<%= settings.baidu_site_verification %>">
+  <% } %>
+
+  <!-- RSS alternate -->
+  <link rel="alternate" type="application/rss+xml" title="<%= siteTitle %> RSS" href="/rss.xml">
+
+  <!-- 字体 -->
+  <link rel="stylesheet" href="/fonts/inter/inter.css">
+
+  <!-- 代码高亮（亮色 & 暗色，本地） -->
+  <link rel="stylesheet" href="/libs/highlightjs/styles/atom-one-light.min.css" id="hl-light">
+  <link rel="stylesheet" href="/libs/highlightjs/styles/atom-one-dark.min.css" id="hl-dark" disabled>
+  
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="/libs/katex/katex.min.css">
+
+  <!-- 样式：全局 + 按页拆分 -->
+  <link rel="stylesheet" href="/css/main.css">
+  <% 
+    const path = (typeof req !== 'undefined' && req && req.path) ? req.path : '';
+    const pageKey = path === '/' ? 'home'
+      : (path.startsWith('/links') ? 'links'
+      : (path.startsWith('/archive') ? 'archive'
+      : (path.startsWith('/category') ? 'category'
+      : (path.startsWith('/article') ? 'article' : ''))));
+  %>
+  <% if (pageKey) { %>
+  <link rel="stylesheet" href="/css/pages/<%= pageKey %>.css">
+  <% } %>
+
+  <!-- 自定义 head 代码注入 -->
+  <% if (settings && settings.head_code) { %>
+  <%- settings.head_code %>
+  <% } %>
+</head>
+<body>
+<script>
+// 暗黑模式初始化（在 body 渲染前执行，防止闪烁）
+(function() {
+  const saved = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  if (saved === 'dark') {
+    const light = document.getElementById('hl-light');
+    const dark = document.getElementById('hl-dark');
+    if (light) light.disabled = true;
+    if (dark) dark.disabled = false;
+  }
+})();
+</script>

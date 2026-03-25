@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台登录 - <%= siteTitle %></title>
+  <%- include('../partials/favicon') %>
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+  <link rel="stylesheet" href="/fonts/inter/inter.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <style>
+    html, body { width: 100%; overflow-x: hidden; }
+    body { overflow-y: auto; height: auto; }
+  </style>
+</head>
+<body class="login-page-bg">
+  <button class="theme-toggle-btn" onclick="toggleTheme()" title="切换主题" style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-1-bg); border: 1px solid var(--surface-border); border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: var(--surface-shadow-1); color: var(--text-primary);">🌙</button>
+  <!-- Background blobs -->
+  <div class="login-blob login-blob-1"></div>
+  <div class="login-blob login-blob-2"></div>
+  <div class="login-blob login-blob-3"></div>
+
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="card-shimmer"></div>
+
+      <!-- Logo + Title -->
+      <div class="login-logo">
+        <% if (typeof settings !== 'undefined' && settings && settings.site_logo) { %>
+        <img src="<%= settings.site_logo %>" alt="<%= siteTitle %>" style="width:100%;height:100%;object-fit:cover;border-radius:20px;">
+        <% } else { %>
+        <%= siteTitle[0] || 'B' %>
+        <% } %>
+      </div>
+      <div class="login-title">
+        <h2><%= siteTitle %> 后台管理</h2>
+        <p>请登录您的管理员账号</p>
+      </div>
+
+      <!-- Error -->
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="login-error">⚠️ <%= error %></div>
+      <% } %>
+
+      <!-- Form -->
+      <form method="POST" action="/admin/login">
+        <div class="login-field">
+          <label>用户名</label>
+          <div class="login-input-wrap">
+            <span class="login-input-icon">👤</span>
+            <input type="text" name="username" placeholder="输入管理员用户名"
+              autocomplete="username" required>
+          </div>
+        </div>
+        <div class="login-field">
+          <label>密码</label>
+          <div class="login-input-wrap">
+            <span class="login-input-icon">🔑</span>
+            <input type="password" name="password" placeholder="输入登录密码"
+              autocomplete="current-password" required>
+          </div>
+        </div>
+        <button type="submit" class="login-submit">立即进入 →</button>
+      </form>
+
+      <div class="login-footer">
+        <a href="/">← 返回前台</a>
+      </div>
+    </div>
+    <div class="login-copyright">© <%= new Date().getFullYear() %> <%= siteTitle %> Admin Panel</div>
+  </div>
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme') || 'light';
+      const next = current === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+        btn.textContent = next === 'dark' ? '☀️' : '🌙';
+      });
+    }
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+        btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+      });
+    })();
+  </script>
+</body>
+</html>

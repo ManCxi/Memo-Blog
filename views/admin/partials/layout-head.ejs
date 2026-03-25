@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - <%= siteTitle %></title>
+  <%- include('../../partials/favicon') %>
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+  <link rel="stylesheet" href="/fonts/inter/inter.css">
+  <link href="/libs/wangeditor/style.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/admin.css">
+  <style>
+    /* 悬浮提示样式 */
+    .floating-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      min-width: 300px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: toast-slide-down 0.3s ease forwards;
+    }
+    @keyframes toast-slide-down {
+      from { transform: translate(-50%, -20px); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="admin-layout">
+  <!-- ── Sidebar ── -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <a href="/" title="Memo">
+        <div class="sidebar-logo-icon">
+          <% if (typeof settings !== 'undefined' && settings && settings.site_logo) { %>
+          <img src="<%= settings.site_logo %>" alt="<%= siteTitle %>" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">
+          <% } else { %>
+          M
+          <% } %>
+        </div>
+        <div>
+          <div class="sidebar-logo-text">Memo</div>
+          <div class="sidebar-logo-sub">后台管理系统</div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <div class="sidebar-nav-section">导航菜单</div>
+
+      <a href="/admin" data-label="仪表盘"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'dashboard' ? 'active' : '' %>">
+        <span class="nav-icon">📊</span><span>仪表盘</span>
+      </a>
+      <a href="/admin/articles" data-label="文章管理"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'articles' ? 'active' : '' %>">
+        <span class="nav-icon">📝</span><span>文章管理</span>
+      </a>
+      <a href="/admin/pages" data-label="页面管理"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'pages' ? 'active' : '' %>">
+        <span class="nav-icon">📄</span><span>页面管理</span>
+      </a>
+      <a href="/admin/taxonomy" data-label="分类/标签管理"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'taxonomy' ? 'active' : '' %>">
+        <span class="nav-icon">🗂️</span><span>分类/标签管理</span>
+      </a>
+      <a href="/admin/media" data-label="附件库"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'media' ? 'active' : '' %>">
+        <span class="nav-icon">🖼️</span><span>附件库</span>
+      </a>
+
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-nav-section">系统</div>
+
+      <a href="/admin/settings"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'settings' ? 'active' : '' %>">
+        <span class="nav-icon">⚙️</span><span>站点信息</span>
+      </a>
+      <a href="/admin/settings/nav"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'settings-nav' ? 'active' : '' %>">
+        <span class="nav-icon">🧭</span><span>导航菜单</span>
+      </a>
+      <a href="/admin/settings/carousel"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'settings-carousel' ? 'active' : '' %>">
+        <span class="nav-icon">🖼️</span><span>轮播图</span>
+      </a>
+      <a href="/admin/settings/links"
+        class="sidebar-nav-link <%= typeof activePage !== 'undefined' && activePage === 'settings-links' ? 'active' : '' %>">
+        <span class="nav-icon">🔗</span><span>友情链接</span>
+      </a>
+    </nav>
+
+    <!-- User info -->
+    <div class="sidebar-footer">
+      <a href="/admin/profile" class="sidebar-user" style="text-decoration:none;">
+        <div class="sidebar-user-avatar">
+          <% if (user && user.avatar) { %>
+          <img src="<%= user.avatar %>" alt="avatar" class="sidebar-user-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <span class="sidebar-user-avatar-fallback" style="display:none;"><%= user && user.nickname ? user.nickname[0].toUpperCase() : 'A' %></span>
+          <% } else { %>
+          <span class="sidebar-user-avatar-fallback"><%= user && user.nickname ? user.nickname[0].toUpperCase() : 'A' %></span>
+          <% } %>
+        </div>
+        <div style="min-width:0;">
+          <div class="sidebar-user-name"><%= user ? user.nickname : '管理员' %></div>
+          <div class="sidebar-user-role"><%= user ? user.role : 'admin' %></div>
+        </div>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main area ── -->
+  <div class="admin-main">
+    <!-- Header -->
+    <header class="admin-header">
+      <div class="admin-header-left">
+        <!-- Hamburger (tablet + mobile) -->
+        <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()" aria-label="菜单">
+          ☰
+        </button>
+        <div class="admin-header-title"><%= title %></div>
+      </div>
+      <div class="admin-header-right">
+        <button class="admin-header-btn theme-toggle-btn" onclick="toggleTheme()" title="切换主题">🌙</button>
+        <a href="/admin/articles/create" class="admin-header-btn" title="写新文章">✏️</a>
+        <a href="/admin/logout" class="admin-header-btn" title="退出登录" onclick="return confirm('确定要退出登录吗？')">🚪</a>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="admin-content">
+      <div class="animate-fade-in-up">
+
+        <!-- Flash messages -->
+        <% if (flash && flash.success) { %>
+        <div class="flash flash-success floating-toast">
+          ✅ <%= flash.success %>
+        </div>
+        <% } %>
+        <% if (flash && flash.error) { %>
+        <div class="flash flash-error floating-toast">
+          ⚠️ <%= flash.error %>
+        </div>
+        <% } %>

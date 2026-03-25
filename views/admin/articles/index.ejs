@@ -1,0 +1,153 @@
+<% const activePage = 'articles' %>
+<%- include('../partials/layout-head') %>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+  <form method="get" style="display:contents;">
+    <div class="filter-group">
+      <label>关键词</label>
+      <input type="text" name="keyword" class="form-control form-control-sm"
+        placeholder="搜索标题…" value="<%= keyword %>" style="min-width:160px;">
+    </div>
+    <div class="filter-group">
+      <label>状态</label>
+      <select name="status" class="form-control form-control-sm">
+        <option value="">全部状态</option>
+        <option value="published" <%= status === 'published' ? 'selected' : '' %>>✅ 已发布</option>
+        <option value="draft"     <%= status === 'draft' ? 'selected' : '' %>>📄 草稿</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>分类</label>
+      <select name="category" class="form-control form-control-sm">
+        <option value="">全部分类</option>
+        <% categories.forEach(cat => { %>
+        <option value="<%= cat.id %>" <%= categoryId == cat.id ? 'selected' : '' %>><%= cat.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div style="display:flex;gap:6px;align-items:flex-end;">
+      <button type="submit" class="btn btn-primary btn-sm">🔍 筛选</button>
+      <a href="/admin/articles" class="btn btn-secondary btn-sm">重置</a>
+    </div>
+  </form>
+</div>
+
+<!-- Header row -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+  <span class="text-sm text-tertiary">共 <strong style="color:var(--text-primary);"><%= total %></strong> 篇文章</span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="/admin/articles/create" class="btn btn-primary btn-sm">✏️ 写新文章</a>
+  </div>
+</div>
+
+<!-- Table card -->
+<div class="table-card">
+  <div class="table-responsive-wrap">
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:40%">标题</th>
+            <th>分类</th>
+            <th>状态</th>
+            <th>阅读</th>
+            <th>发布时间</th>
+            <th class="actions-col">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (articles.length === 0) { %>
+          <tr><td colspan="6" class="table-empty">暂无文章，<a href="/admin/articles/create" style="color:var(--accent);">去发布第一篇</a></td></tr>
+          <% } %>
+          <% articles.forEach(article => { %>
+          <tr>
+            <td>
+              <div style="font-weight:600;display:flex;align-items:center;gap:6px;">
+                <% if (article.pinned) { %><span class="status-badge status-pinned" style="font-size:10px;">📌</span><% } %>
+                <a href="/article/<%= article.slug %>" target="_blank"
+                  style="color:var(--text-primary);text-decoration:none;transition:color .15s;"
+                  onmouseover="this.style.color='var(--accent)'"
+                  onmouseout="this.style.color='var(--text-primary)'">
+                  <%= article.title %>
+                </a>
+              </div>
+            </td>
+            <td>
+              <% if (article.category) { %>
+              <span class="status-badge badge-category"><%= article.category.name %></span>
+              <% } else { %><span class="text-tertiary">—</span><% } %>
+            </td>
+            <td>
+              <span class="status-badge <%= article.status === 'published' ? 'status-published' : 'status-draft' %>">
+                <%= article.status === 'published' ? '已发布' : '草稿' %>
+              </span>
+            </td>
+            <td class="text-tertiary text-sm">👁️ <%= article.views || 0 %></td>
+            <td class="text-tertiary text-sm" style="white-space:nowrap;">
+              <%= new Date(article.publishedAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) %>
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;">
+                <a href="/admin/articles/<%= article.id %>/edit" class="btn btn-edit btn-sm">✏️</a>
+                <form action="/admin/articles/<%= article.id %>?_method=DELETE" method="POST" style="display:inline;"
+                  onsubmit="return confirm('确定删除「<%= article.title %>」吗？')">
+                  <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile card list -->
+    <div class="mobile-card-list">
+      <% if (articles.length === 0) { %>
+      <div class="table-empty">暂无文章，<a href="/admin/articles/create" style="color:var(--accent);">去发布第一篇</a></div>
+      <% } %>
+      <% articles.forEach(article => { %>
+      <div class="mobile-list-item">
+        <div class="mobile-list-item-title">
+          <% if (article.pinned) { %><span class="status-badge status-pinned" style="font-size:10px;">📌</span><% } %>
+          <a href="/article/<%= article.slug %>" target="_blank" style="color:var(--text-primary);">
+            <%= article.title %>
+          </a>
+        </div>
+        <div class="mobile-list-item-meta">
+          <% if (article.category) { %><span class="status-badge badge-category"><%= article.category.name %></span><% } %>
+          <span class="status-badge <%= article.status === 'published' ? 'status-published' : 'status-draft' %>">
+            <%= article.status === 'published' ? '已发布' : '草稿' %>
+          </span>
+          <span>👁️ <%= article.views || 0 %></span>
+          <span><%= new Date(article.publishedAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) %></span>
+        </div>
+        <div class="mobile-list-item-actions">
+          <a href="/admin/articles/<%= article.id %>/edit" class="btn btn-edit btn-sm">✏️ 编辑</a>
+          <form action="/admin/articles/<%= article.id %>?_method=DELETE" method="POST" style="display:inline;"
+            onsubmit="return confirm('确定删除「<%= article.title %>」吗？')">
+            <button type="submit" class="btn btn-danger btn-sm">🗑️ 删除</button>
+          </form>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+<% if (totalPages > 1) { %>
+<div class="pagination">
+  <a href="?page=<%= currentPage-1 %>&keyword=<%= keyword %>&status=<%= status %>&category=<%= categoryId %>"
+    class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">‹</a>
+  <% for (let i = 1; i <= totalPages; i++) { %>
+  <a href="?page=<%= i %>&keyword=<%= keyword %>&status=<%= status %>&category=<%= categoryId %>"
+    class="page-btn <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+  <% } %>
+  <a href="?page=<%= currentPage+1 %>&keyword=<%= keyword %>&status=<%= status %>&category=<%= categoryId %>"
+    class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">›</a>
+</div>
+<% } %>
+
+<%- include('../partials/layout-foot') %>
