@@ -274,7 +274,5 @@ pm2 start app.js --name memo-blog
 - 不希望引入前后端分离复杂度的内容站点
 
 ## License
-[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
-
 本项目采用 [知识共享 署名-非商业性使用-相同方式共享 4.0 国际版 (CC BY-NC-SA 4.0)][cc-by-nc-sa] 协议授权。
 [![CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
