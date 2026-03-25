@@ -8,6 +8,9 @@ const Category = sequelize.define('Category', {
   description: { type: DataTypes.TEXT },
   sort: { type: DataTypes.INTEGER, defaultValue: 0 },
   parentId: { type: DataTypes.INTEGER, allowNull: true }
+}, {
+  tableName: 'Categories',
+  freezeTableName: true
 });
 
 module.exports = Category;

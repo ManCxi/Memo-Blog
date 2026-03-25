@@ -18,6 +18,9 @@ const Article = sequelize.define('Article', {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
   }
+}, {
+  tableName: 'Articles',
+  freezeTableName: true
 });
 
 module.exports = Article;

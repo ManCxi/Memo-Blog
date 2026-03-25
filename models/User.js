@@ -11,6 +11,8 @@ const User = sequelize.define('User', {
   avatar: { type: DataTypes.STRING(200) },
   role: { type: DataTypes.ENUM('admin', 'editor'), defaultValue: 'admin' }
 }, {
+  tableName: 'Users',
+  freezeTableName: true,
   hooks: {
     beforeCreate: async (user) => {
       if (user.password) {

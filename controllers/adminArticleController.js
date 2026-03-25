@@ -2,8 +2,87 @@ const { Article, Category, Tag, Attachment } = require('../models');
 const { cache } = require('../utils/cache');
 const slugify = require('slugify');
 const { getRelativeUploadPath } = require('../config/uploadsPath');
+const path = require('path');
+const fs = require('fs');
+const sharp = require('sharp');
 
 const PAGE_SIZE = 15;
+
+async function compressImageIfPossible(filePath, mimetype) {
+  const fallback = { filePath, size: fs.statSync(filePath).size, mimetype: mimetype || 'application/octet-stream' };
+  if (!mimetype || !mimetype.startsWith('image/')) return fallback;
+  try {
+    const metadata = await sharp(filePath, { animated: true, failOn: 'none' }).metadata();
+    if (!metadata || !metadata.format) return fallback;
+    if (metadata.pages && metadata.pages > 1) return fallback;
+    const format = String(metadata.format).toLowerCase();
+    if (!['jpeg', 'jpg', 'png', 'webp'].includes(format)) return fallback;
+
+    const originalSize = fallback.size;
+    const sourceExt = path.extname(filePath).toLowerCase();
+    const sourceName = path.basename(filePath, sourceExt);
+    const sourceDir = path.dirname(filePath);
+    const candidates = [];
+    const width = Number(metadata.width) || 0;
+    const height = Number(metadata.height) || 0;
+
+    const buildBase = () => {
+      let pipeline = sharp(filePath, { failOn: 'none' }).rotate();
+      if (width > 2560 || height > 2560) {
+        pipeline = pipeline.resize({ width: 2560, height: 2560, fit: 'inside', withoutEnlargement: true });
+      }
+      return pipeline;
+    };
+
+    const addCandidate = async (pipeline, ext, outputMime) => {
+      const tmpName = `${sourceName}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const tmpPath = path.join(sourceDir, tmpName);
+      await pipeline.toFile(tmpPath);
+      const stat = fs.statSync(tmpPath);
+      candidates.push({ path: tmpPath, size: stat.size, mimetype: outputMime, ext });
+    };
+
+    if (format === 'jpeg' || format === 'jpg') {
+      await addCandidate(buildBase().jpeg({ quality: 78, mozjpeg: true, progressive: true, chromaSubsampling: '4:2:0' }), 'jpg', 'image/jpeg');
+    }
+    if (format === 'png') {
+      await addCandidate(buildBase().png({ quality: 78, compressionLevel: 9, palette: true, effort: 10 }), 'png', 'image/png');
+    }
+    if (format === 'webp') {
+      await addCandidate(buildBase().webp({ quality: 78, alphaQuality: 80, effort: 6 }), 'webp', 'image/webp');
+    }
+    await addCandidate(buildBase().webp({ quality: metadata.hasAlpha ? 80 : 76, alphaQuality: 80, effort: 6 }), 'webp', 'image/webp');
+
+    if (!candidates.length) return fallback;
+    let best = candidates[0];
+    for (const item of candidates) {
+      if (item.size < best.size) best = item;
+    }
+    const minSavingRatio = 0.05;
+    if (best.size >= originalSize * (1 - minSavingRatio)) {
+      for (const item of candidates) {
+        if (fs.existsSync(item.path)) fs.unlinkSync(item.path);
+      }
+      return fallback;
+    }
+
+    const bestExt = `.${best.ext}`;
+    const targetPath = sourceExt === bestExt ? filePath : path.join(sourceDir, `${sourceName}${bestExt}`);
+    for (const item of candidates) {
+      if (item.path !== best.path && fs.existsSync(item.path)) fs.unlinkSync(item.path);
+    }
+    if (best.path !== targetPath) {
+      if (fs.existsSync(targetPath)) fs.unlinkSync(targetPath);
+      fs.renameSync(best.path, targetPath);
+    } else if (best.path !== filePath) {
+      fs.renameSync(best.path, filePath);
+    }
+    if (targetPath !== filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    return { filePath: targetPath, size: fs.statSync(targetPath).size, mimetype: best.mimetype };
+  } catch (err) {
+    return fallback;
+  }
+}
 
 // 文章列表
 exports.index = async (req, res) => {
@@ -67,6 +146,12 @@ exports.createPage = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt } = req.body;
+    let uploadedCover = '';
+    if (req.file) {
+      const compressedCover = await compressImageIfPossible(req.file.path, req.file.mimetype);
+      const coverPath = compressedCover.filePath || req.file.path;
+      uploadedCover = `/uploads/${getRelativeUploadPath(coverPath)}`;
+    }
 
     let slug = slugify(title, { lower: true, strict: true });
     // 如果 slugify 结果为空（例如纯中文标题），则使用时间戳作为 slug
@@ -89,7 +174,7 @@ exports.create = async (req, res) => {
       slug,
       content,
       summary: summary || content.slice(0, 200),
-      cover: cover || (req.file ? `/uploads/${getRelativeUploadPath(req.file.path)}` : ''),
+      cover: cover || uploadedCover,
       CategoryId: CategoryId || null,
       UserId: req.session.user.id,
       status: finalStatus,
@@ -156,6 +241,12 @@ exports.update = async (req, res) => {
     if (!article) return res.status(404).send('文章不存在');
 
     const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt } = req.body;
+    let uploadedCover = '';
+    if (req.file) {
+      const compressedCover = await compressImageIfPossible(req.file.path, req.file.mimetype);
+      const coverPath = compressedCover.filePath || req.file.path;
+      uploadedCover = `/uploads/${getRelativeUploadPath(coverPath)}`;
+    }
 
     let finalStatus = 'published';
     if (Array.isArray(status)) {
@@ -168,7 +259,7 @@ exports.update = async (req, res) => {
       title,
       content,
       summary: summary || content.slice(0, 200),
-      cover: cover || (req.file ? `/uploads/${getRelativeUploadPath(req.file.path)}` : article.cover),
+      cover: cover || uploadedCover || article.cover,
       CategoryId: CategoryId || null,
       status: finalStatus,
       pinned: pinned === 'on' || pinned === '1'
@@ -227,14 +318,16 @@ exports.uploadImage = async (req, res) => {
     if (!req.file) return res.json({ success: false, message: '上传失败' });
     const { filename, path: filePath, mimetype, size, originalname } = req.file;
     const displayName = Buffer.from(originalname || filename, 'latin1').toString('utf8');
-    const urlPath = `/uploads/${getRelativeUploadPath(filePath)}`;
+    const compressed = await compressImageIfPossible(filePath, mimetype);
+    const finalPath = compressed.filePath || filePath;
+    const urlPath = `/uploads/${getRelativeUploadPath(finalPath)}`;
 
     // 创建附件记录，确保编辑器上传的文件也能在附件库看到
     const att = await Attachment.create({
       filename: displayName,
       path: urlPath,
-      mimetype: mimetype || 'image/jpeg',
-      size: size || 0
+      mimetype: compressed.mimetype || 'image/jpeg',
+      size: compressed.size || size || 0
     });
 
     res.json({ success: true, url: urlPath, id: att.id, filename: displayName });

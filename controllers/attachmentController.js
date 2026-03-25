@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 const { Op } = require('sequelize');
 const { Attachment } = require('../models');
 const { UPLOADS_ROOT, resolveUploadDiskPath, getRelativeUploadPath } = require('../config/uploadsPath');
@@ -30,6 +31,82 @@ function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+async function compressImageIfPossible(filePath, mimetype) {
+  const fallback = { filePath, size: fs.statSync(filePath).size, mimetype: mimetype || 'application/octet-stream' };
+  if (!mimetype || !mimetype.startsWith('image/')) return fallback;
+  try {
+    const metadata = await sharp(filePath, { animated: true, failOn: 'none' }).metadata();
+    if (!metadata || !metadata.format) return fallback;
+    if (metadata.pages && metadata.pages > 1) return fallback;
+    const format = String(metadata.format).toLowerCase();
+    if (!['jpeg', 'jpg', 'png', 'webp'].includes(format)) return fallback;
+
+    const originalSize = fallback.size;
+    const sourceExt = path.extname(filePath).toLowerCase();
+    const sourceName = path.basename(filePath, sourceExt);
+    const sourceDir = path.dirname(filePath);
+    const candidates = [];
+    const width = Number(metadata.width) || 0;
+    const height = Number(metadata.height) || 0;
+
+    const buildBase = () => {
+      let pipeline = sharp(filePath, { failOn: 'none' }).rotate();
+      if (width > 2560 || height > 2560) {
+        pipeline = pipeline.resize({ width: 2560, height: 2560, fit: 'inside', withoutEnlargement: true });
+      }
+      return pipeline;
+    };
+
+    const addCandidate = async (pipeline, ext, outputMime) => {
+      const tmpName = `${sourceName}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const tmpPath = path.join(sourceDir, tmpName);
+      await pipeline.toFile(tmpPath);
+      const stat = fs.statSync(tmpPath);
+      candidates.push({ path: tmpPath, size: stat.size, mimetype: outputMime, ext });
+    };
+
+    if (format === 'jpeg' || format === 'jpg') {
+      await addCandidate(buildBase().jpeg({ quality: 78, mozjpeg: true, progressive: true, chromaSubsampling: '4:2:0' }), 'jpg', 'image/jpeg');
+    }
+    if (format === 'png') {
+      await addCandidate(buildBase().png({ quality: 78, compressionLevel: 9, palette: true, effort: 10 }), 'png', 'image/png');
+    }
+    if (format === 'webp') {
+      await addCandidate(buildBase().webp({ quality: 78, alphaQuality: 80, effort: 6 }), 'webp', 'image/webp');
+    }
+    await addCandidate(buildBase().webp({ quality: metadata.hasAlpha ? 80 : 76, alphaQuality: 80, effort: 6 }), 'webp', 'image/webp');
+
+    if (!candidates.length) return fallback;
+    let best = candidates[0];
+    for (const item of candidates) {
+      if (item.size < best.size) best = item;
+    }
+    const minSavingRatio = 0.05;
+    if (best.size >= originalSize * (1 - minSavingRatio)) {
+      for (const item of candidates) {
+        if (fs.existsSync(item.path)) fs.unlinkSync(item.path);
+      }
+      return fallback;
+    }
+
+    const bestExt = `.${best.ext}`;
+    const targetPath = sourceExt === bestExt ? filePath : path.join(sourceDir, `${sourceName}${bestExt}`);
+    for (const item of candidates) {
+      if (item.path !== best.path && fs.existsSync(item.path)) fs.unlinkSync(item.path);
+    }
+    if (best.path !== targetPath) {
+      if (fs.existsSync(targetPath)) fs.unlinkSync(targetPath);
+      fs.renameSync(best.path, targetPath);
+    } else if (best.path !== filePath) {
+      fs.renameSync(best.path, filePath);
+    }
+    if (targetPath !== filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    return { filePath: targetPath, size: fs.statSync(targetPath).size, mimetype: best.mimetype };
+  } catch (err) {
+    return fallback;
+  }
 }
 
 // 附件列表页（HTML 渲染）
@@ -144,13 +221,15 @@ exports.upload = async (req, res) => {
     }
     const { filename, path: filePath, mimetype, size, originalname } = req.file;
     const displayName = Buffer.from(originalname || filename, 'latin1').toString('utf8');
-    const urlPath = '/uploads/' + getRelativeUploadPath(filePath);
+    const compressed = await compressImageIfPossible(filePath, mimetype);
+    const finalPath = compressed.filePath || filePath;
+    const urlPath = '/uploads/' + getRelativeUploadPath(finalPath);
 
     const att = await Attachment.create({
       filename: displayName,
       path: urlPath,
-      mimetype: mimetype || 'application/octet-stream',
-      size: size || 0
+      mimetype: compressed.mimetype,
+      size: compressed.size || size || 0
     });
 
     res.json({ ok: true, url: urlPath, id: att.id, filename: displayName });

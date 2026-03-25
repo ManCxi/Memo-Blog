@@ -39,12 +39,63 @@ const DEFAULT_SETTINGS = [
   { key: 'friend_links', value: JSON.stringify([]) }
 ];
 
+async function normalizeMySqlTableNames() {
+  if (sequelize.getDialect() !== 'mysql') return;
+  const pairs = [
+    ['users', 'Users'],
+    ['categories', 'Categories'],
+    ['tags', 'Tags'],
+    ['articles', 'Articles'],
+    ['attachments', 'Attachments'],
+    ['settings', 'Settings'],
+    ['pages', 'Pages'],
+    ['articletags', 'ArticleTags']
+  ];
+  const queryInterface = sequelize.getQueryInterface();
+  const allTables = (await queryInterface.showAllTables()).map(t => String(t));
+  const [lctnRows] = await sequelize.query('SELECT @@lower_case_table_names AS lctn');
+  const lowerCaseTableNames = Number(lctnRows[0] && lctnRows[0].lctn);
+
+  for (const [lower, upper] of pairs) {
+    const hasLower = allTables.includes(lower);
+    const hasUpper = allTables.includes(upper);
+    if (!hasLower) continue;
+    if (!hasUpper) {
+      if (lowerCaseTableNames !== 0) continue;
+      try {
+        await sequelize.query(`RENAME TABLE \`${lower}\` TO \`${upper}\``);
+      } catch (e) {
+        const code = e && e.original && e.original.code;
+        if (code === 'ER_TABLE_EXISTS_ERROR') continue;
+        throw e;
+      }
+      continue;
+    }
+    const [upperCountRows] = await sequelize.query(`SELECT COUNT(*) AS c FROM \`${upper}\``);
+    const upperCount = Number(upperCountRows[0] && upperCountRows[0].c ? upperCountRows[0].c : 0);
+    if (upperCount > 0) continue;
+    const upperColumns = Object.keys(await queryInterface.describeTable(upper));
+    const lowerColumns = Object.keys(await queryInterface.describeTable(lower));
+    const shared = upperColumns.filter(col => lowerColumns.includes(col));
+    if (shared.length === 0) continue;
+    const columnsSql = shared.map(col => `\`${col}\``).join(', ');
+    await sequelize.query(`INSERT IGNORE INTO \`${upper}\` (${columnsSql}) SELECT ${columnsSql} FROM \`${lower}\``);
+  }
+}
+
 async function init() {
   console.log('🚀 开始初始化博客系统...\n');
 
   await sequelize.authenticate();
   console.log('✅ 数据库连接成功');
-  await sequelize.sync({ force: false, alter: true });
+  await normalizeMySqlTableNames();
+  try {
+    await sequelize.sync({ force: false, alter: true });
+  } catch (syncErr) {
+    console.warn('⚠️  数据库增量同步时遇到一些限制:', syncErr.message);
+    console.log('🔄  尝试基础同步...');
+    await sequelize.sync();
+  }
   console.log('✅ 数据库表同步完成\n');
 
   // 创建管理员账号（如果不存在）

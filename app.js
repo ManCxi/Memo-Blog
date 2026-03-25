@@ -91,10 +91,55 @@ app.use((err, req, res, next) => {
 // 启动
 const PORT = process.env.PORT || 3000;
 
+async function normalizeMySqlTableNames() {
+  if (sequelize.getDialect() !== 'mysql') return;
+  const pairs = [
+    ['users', 'Users'],
+    ['categories', 'Categories'],
+    ['tags', 'Tags'],
+    ['articles', 'Articles'],
+    ['attachments', 'Attachments'],
+    ['settings', 'Settings'],
+    ['pages', 'Pages'],
+    ['articletags', 'ArticleTags']
+  ];
+  const queryInterface = sequelize.getQueryInterface();
+  const allTables = (await queryInterface.showAllTables()).map(t => String(t));
+  const [lctnRows] = await sequelize.query('SELECT @@lower_case_table_names AS lctn');
+  const lowerCaseTableNames = Number(lctnRows[0] && lctnRows[0].lctn);
+
+  for (const [lower, upper] of pairs) {
+    const hasLower = allTables.includes(lower);
+    const hasUpper = allTables.includes(upper);
+    if (!hasLower) continue;
+    if (!hasUpper) {
+      if (lowerCaseTableNames !== 0) continue;
+      try {
+        await sequelize.query(`RENAME TABLE \`${lower}\` TO \`${upper}\``);
+      } catch (e) {
+        const code = e && e.original && e.original.code;
+        if (code === 'ER_TABLE_EXISTS_ERROR') continue;
+        throw e;
+      }
+      continue;
+    }
+    const [upperCountRows] = await sequelize.query(`SELECT COUNT(*) AS c FROM \`${upper}\``);
+    const upperCount = Number(upperCountRows[0] && upperCountRows[0].c ? upperCountRows[0].c : 0);
+    if (upperCount > 0) continue;
+    const upperColumns = Object.keys(await queryInterface.describeTable(upper));
+    const lowerColumns = Object.keys(await queryInterface.describeTable(lower));
+    const shared = upperColumns.filter(col => lowerColumns.includes(col));
+    if (shared.length === 0) continue;
+    const columnsSql = shared.map(col => `\`${col}\``).join(', ');
+    await sequelize.query(`INSERT IGNORE INTO \`${upper}\` (${columnsSql}) SELECT ${columnsSql} FROM \`${lower}\``);
+  }
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
     console.log('✅ 数据库连接成功');
+    await normalizeMySqlTableNames();
     // 尝试同步数据库结构
     // 提示：我们使用了显式的索引名称（如 unique_tag_name）来防止 MySQL 在同步时生成过多重复索引
     try {

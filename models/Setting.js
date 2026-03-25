@@ -7,6 +7,9 @@ const Setting = sequelize.define('Setting', {
 
   key: { type: DataTypes.STRING(100), allowNull: false, unique: 'unique_setting_key' },
   value: { type: DataTypes.TEXT('long') }
+}, {
+  tableName: 'Settings',
+  freezeTableName: true
 });
 
 module.exports = Setting;

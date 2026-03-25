@@ -8,6 +8,8 @@ const Attachment = sequelize.define('Attachment', {
   mimetype: { type: DataTypes.STRING(100), defaultValue: 'application/octet-stream' },
   size: { type: DataTypes.INTEGER, defaultValue: 0 }
 }, {
+  tableName: 'Attachments',
+  freezeTableName: true,
   updatedAt: false
 });
 

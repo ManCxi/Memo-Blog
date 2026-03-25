@@ -11,6 +11,9 @@ const Page = sequelize.define('Page', {
     defaultValue: 'published'
   },
   views: { type: DataTypes.INTEGER, defaultValue: 0 }
+}, {
+  tableName: 'Pages',
+  freezeTableName: true
 });
 
 module.exports = Page;
