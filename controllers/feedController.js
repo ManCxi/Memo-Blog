@@ -1,4 +1,4 @@
-const { Article, Category } = require('../models');
+const { Article, Category, Page } = require('../models');
 const { getSettings } = require('../utils/settings');
 
 function escapeXml(str) {
@@ -11,6 +11,11 @@ function escapeXml(str) {
     .replace(/'/g, '&apos;');
 }
 
+function plainText(str) {
+  if (!str) return '';
+  return String(str).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
 // RSS 2.0
 exports.rss = async (req, res) => {
   try {
@@ -19,26 +24,48 @@ exports.rss = async (req, res) => {
     const siteName = settings.site_name || '我的博客';
     const siteDesc = settings.site_description || '分享技术与生活';
 
-    const articles = await Article.findAll({
-      where: { status: 'published' },
-      order: [['createdAt', 'DESC']],
-      limit: 50,
-      include: [{ association: 'category', attributes: ['name'] }]
-    });
+    const [articles, pages] = await Promise.all([
+      Article.findAll({
+        where: { status: 'published' },
+        order: [['createdAt', 'DESC']],
+        limit: 50,
+        include: [{ association: 'category', attributes: ['name'] }]
+      }),
+      Page.findAll({
+        where: { status: 'published' },
+        order: [['createdAt', 'DESC']],
+        limit: 50,
+        attributes: ['title', 'slug', 'content', 'createdAt']
+      })
+    ]);
 
-    const items = articles.map(a => {
-      const link = `${siteUrl}/article/${a.slug}`;
-      const pubDate = new Date(a.createdAt).toUTCString();
-      const desc = escapeXml(a.summary || a.content.slice(0, 200));
-      return `    <item>
-      <title>${escapeXml(a.title)}</title>
-      <link>${link}</link>
-      <guid>${link}</guid>
-      <pubDate>${pubDate}</pubDate>
-      <description>${desc}</description>
-      ${a.category ? `<category>${escapeXml(a.category.name)}</category>` : ''}
-    </item>`;
-    }).join('\n');
+    const rssItems = [
+      ...articles.map(a => ({
+        title: a.title,
+        link: `${siteUrl}/article/${a.slug}`,
+        pubDate: a.createdAt,
+        desc: a.summary || plainText(a.content).slice(0, 200),
+        category: a.category ? a.category.name : ''
+      })),
+      ...pages.map(p => ({
+        title: p.title,
+        link: `${siteUrl}/p/${p.slug}`,
+        pubDate: p.createdAt,
+        desc: plainText(p.content).slice(0, 200),
+        category: '页面'
+      }))
+    ]
+      .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate))
+      .slice(0, 50);
+
+    const items = rssItems.map(item => `    <item>
+      <title>${escapeXml(item.title)}</title>
+      <link>${item.link}</link>
+      <guid>${item.link}</guid>
+      <pubDate>${new Date(item.pubDate).toUTCString()}</pubDate>
+      <description>${escapeXml(item.desc)}</description>
+      ${item.category ? `<category>${escapeXml(item.category)}</category>` : ''}
+    </item>`).join('\n');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -67,13 +94,19 @@ exports.sitemap = async (req, res) => {
     const settings = await getSettings();
     const siteUrl = (settings.site_url || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 
-    const articles = await Article.findAll({
-      where: { status: 'published' },
-      attributes: ['slug', 'updatedAt'],
-      order: [['updatedAt', 'DESC']]
-    });
-
-    const categories = await Category.findAll({ attributes: ['slug', 'updatedAt'] });
+    const [articles, categories, pages] = await Promise.all([
+      Article.findAll({
+        where: { status: 'published' },
+        attributes: ['slug', 'updatedAt'],
+        order: [['updatedAt', 'DESC']]
+      }),
+      Category.findAll({ attributes: ['slug', 'updatedAt'] }),
+      Page.findAll({
+        where: { status: 'published' },
+        attributes: ['slug', 'updatedAt'],
+        order: [['updatedAt', 'DESC']]
+      })
+    ]);
 
     const staticUrls = ['/', '/archive', '/links'].map(p => ({
       loc: siteUrl + p,
@@ -94,7 +127,14 @@ exports.sitemap = async (req, res) => {
       priority: '0.6'
     }));
 
-    const allUrls = [...staticUrls, ...articleUrls, ...categoryUrls];
+    const pageUrls = pages.map(p => ({
+      loc: `${siteUrl}/p/${p.slug}`,
+      lastmod: new Date(p.updatedAt).toISOString().slice(0, 10),
+      changefreq: 'monthly',
+      priority: '0.6'
+    }));
+
+    const allUrls = [...staticUrls, ...articleUrls, ...categoryUrls, ...pageUrls];
 
     const urlTags = allUrls.map(u => `  <url>
     <loc>${escapeXml(u.loc)}</loc>

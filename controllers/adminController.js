@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { User, Article, Category, Tag, Page } = require('../models');
 const { getSettings, updateSettings, invalidateCache } = require('../utils/settings');
 const { cache } = require('../utils/cache');

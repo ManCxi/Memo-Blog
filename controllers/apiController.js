@@ -2,7 +2,7 @@ const { Article, Category, Tag, Setting, User } = require('../models');
 const { cache } = require('../utils/cache');
 const { getSettings } = require('../utils/settings');
 const slugify = require('slugify');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 
 exports.getArticles = async (req, res) => {
