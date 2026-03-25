@@ -27,6 +27,9 @@ pids/
 coverage/
 .nyc_output/
 
+# zip
+*.zip
+
 # build artifacts
 dist/
 build/

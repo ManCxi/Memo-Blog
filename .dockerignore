@@ -8,3 +8,6 @@ npm-debug.log
 uploads
 database.sqlite
 *.sqlite
+*.sqlite3
+*.db
+*.zip

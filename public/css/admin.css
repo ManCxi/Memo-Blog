@@ -743,6 +743,17 @@ button { font-family: inherit; }
   display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px;
 }
 .filter-bar .form-control { width: auto; }
+.filter-bar .form-control-sm,
+.filter-bar .btn-sm {
+  height: 32px;
+}
+.filter-bar .form-control-sm {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.filter-bar .btn-sm {
+  line-height: 1;
+}
 .filter-group { display: flex; flex-direction: column; gap: 4px; }
 .filter-group label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
 

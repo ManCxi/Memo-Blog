@@ -14,8 +14,8 @@ function getFileIcon(type) {
       ⬆ 上传文件
       <input type="file" id="uploadInput" multiple accept="*/*" style="display:none" onchange="uploadFiles(this.files)">
     </label>
-    <button class="btn btn-secondary" onclick="syncFiles()">🔄 同步本地</button>
-    <button class="btn btn-danger" id="batchDeleteBtn" style="display:none;" onclick="batchDelete()">🗑 批量删除</button>
+    <button type="button" class="btn btn-secondary" onclick="syncFiles()">🔄 同步本地</button>
+    <button type="button" class="btn btn-danger" id="batchDeleteBtn" style="display:none;" onclick="batchDelete()">🗑 批量删除</button>
   </div>
 </div>
 
@@ -190,6 +190,59 @@ function getFileIcon(type) {
   return map[type] || '📦';
 }
 
+function buildWebpName(name) {
+  if (!name) return 'upload.webp';
+  const idx = name.lastIndexOf('.');
+  if (idx <= 0) return `${name}.webp`;
+  return `${name.slice(0, idx)}.webp`;
+}
+
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('图片读取失败'));
+    };
+    img.src = url;
+  });
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+}
+
+async function compressImageBeforeUpload(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) return file;
+  const lower = (file.name || '').toLowerCase();
+  if (lower.endsWith('.gif') || lower.endsWith('.svg')) return file;
+  try {
+    const img = await loadImageFile(file);
+    const maxEdge = 2560;
+    const ratio = Math.min(1, maxEdge / Math.max(img.width || 1, img.height || 1));
+    const w = Math.max(1, Math.round((img.width || 1) * ratio));
+    const h = Math.max(1, Math.round((img.height || 1) * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, w, h);
+    const blob = await canvasToBlob(canvas, 'image/webp', 0.82);
+    if (!blob) return file;
+    if (blob.size >= file.size * 0.95) return file;
+    const webpName = buildWebpName(file.name);
+    return new File([blob], webpName, { type: 'image/webp', lastModified: Date.now() });
+  } catch (e) {
+    return file;
+  }
+}
+
 // 上传
 async function uploadFiles(files) {
   if (!files.length) return;
@@ -197,19 +250,36 @@ async function uploadFiles(files) {
   const text = document.getElementById('uploadProgressText');
   progress.style.display = 'block';
   let done = 0;
+  let success = 0;
+  const failed = [];
   for (const file of files) {
+    const uploadFile = await compressImageBeforeUpload(file);
     const fd = new FormData();
-    fd.append('file', file);
+    fd.append('file', uploadFile);
     text.textContent = `(${done+1}/${files.length}) ${file.name}`;
     try {
       const r = await fetch('/admin/media/upload', { method: 'POST', body: fd });
-      const d = await r.json();
-      if (!d.ok) console.error(d.message);
-    } catch(e) { console.error(e); }
+      const contentType = r.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        failed.push(`${file.name}: 服务返回异常响应`);
+      } else {
+        const d = await r.json();
+        if (r.ok && d.ok) success++;
+        else failed.push(`${file.name}: ${d.message || '上传失败'}`);
+      }
+    } catch(e) {
+      failed.push(`${file.name}: ${e.message || '网络异常'}`);
+    }
     done++;
   }
   progress.style.display = 'none';
-  location.reload();
+  text.textContent = '';
+  if (success > 0) {
+    showToast(`上传完成：成功 ${success} 个，失败 ${failed.length} 个`);
+    setTimeout(() => location.reload(), 600);
+    return;
+  }
+  alert('上传失败：\n' + failed.join('\n'));
 }
 
 // 删除单个
