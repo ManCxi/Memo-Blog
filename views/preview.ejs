@@ -1,5 +1,18 @@
 <%- include('partials/head', { title: '文章预览' }) %>
 <%- include('partials/nav') %>
+<style>
+  #previewContent {
+    font-size: 17px;
+    line-height: 1.9;
+  }
+  #previewContent pre,
+  #previewContent pre code,
+  #previewContent pre code.hljs,
+  #previewContent .hljs {
+    font-size: 16px !important;
+    line-height: 1.7;
+  }
+</style>
 
 <main class="page-container" style="padding-top: 20px;">
   <!-- Breadcrumb -->

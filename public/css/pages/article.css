@@ -25,6 +25,17 @@
 }
 .article-detail-meta a { color: var(--text-tertiary); text-decoration: none; }
 .article-detail-meta a:hover { color: var(--accent); }
+.article-prose {
+  font-size: 17px;
+  line-height: 1.9;
+}
+.article-prose pre,
+.article-prose pre code,
+.article-prose pre code.hljs,
+.article-prose .hljs {
+  font-size: 16px !important;
+  line-height: 1.7;
+}
 
 .article-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--surface-border); }
 

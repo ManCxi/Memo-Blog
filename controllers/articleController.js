@@ -5,6 +5,14 @@ const { marked } = require('marked');
 
 const PAGE_SIZE = 10;
 
+function renderArticleContent(content) {
+  const raw = String(content || '');
+  if (!raw.trim()) return '';
+  const hasRichHtml = /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(raw);
+  if (hasRichHtml) return raw;
+  return marked(raw);
+}
+
 // 获取侧边栏数据
 async function getSidebarData() {
   const cacheKey = 'sidebar:data';
@@ -67,8 +75,8 @@ exports.show = async (req, res) => {
       totalViews += 1;
     }
 
-    // Markdown 转 HTML
-    const contentHtml = marked(article.content || '');
+    // 内容转 HTML（富文本直出，纯 Markdown 再解析）
+    const contentHtml = renderArticleContent(article.content);
 
     // 上一篇/下一篇
     const { Op } = require('sequelize');
