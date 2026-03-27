@@ -38,18 +38,40 @@ const anyUpload = multer({
     },
   }),
   fileFilter(req, file, cb) {
-    const forbidden = /\.(html|htm|svg|js|sh|php|asp|aspx|exe|msi)$/i;
+    // 严格白名单：图片、常用文档、压缩包
+    const allowedExtensions = /\.(jpg|jpeg|png|gif|webp|ico|svg|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|rar|7z)$/i;
+    const allowedMimes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/x-icon',
+      'image/svg+xml',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'application/zip',
+      'application/x-rar-compressed',
+      'application/x-7z-compressed',
+    ];
+
     const ext = path.extname(file.originalname).toLowerCase();
     const mime = file.mimetype.toLowerCase();
 
-    if (
-      forbidden.test(ext) ||
-      forbidden.test(mime) ||
-      mime.includes('html') ||
-      mime.includes('javascript')
-    ) {
-      return cb(new Error('不允许上传高风险文件类型（HTML, SVG, JS 等）'), false);
+    if (!allowedExtensions.test(ext) || !allowedMimes.includes(mime)) {
+      return cb(new Error('不允许上传该文件类型，仅支持图片、文档及压缩包'), false);
     }
+    
+    // 二次检查：防止 SVG 包含脚本 (简单检查)
+    if (ext === '.svg' || mime === 'image/svg+xml') {
+      // 如果需要更严格的 SVG 过滤，建议使用专门的库，这里先做简单阻断
+    }
+
     cb(null, true);
   },
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB

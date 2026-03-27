@@ -1,8 +1,7 @@
 const { Page, Category, Tag, Article } = require('../models');
 const { cache, CACHE_EXPIRES } = require('../utils/cache');
+const { sanitize } = require('../utils/sanitizer');
 const { getSidebarData } = require('../services/sidebarService');
-
-// getSidebarData moved to services/sidebarService.js
 
 exports.show = async (req, res) => {
   try {
@@ -25,7 +24,7 @@ exports.show = async (req, res) => {
     res.render('page', {
       title: page.title,
       page,
-      contentHtml: page.content, // 直接渲染 HTML (编辑器输出的就是 HTML)
+      contentHtml: sanitize(page.content), // Add sanitization as 2nd layer defense
       totalViews,
       sidebar,
     });
