@@ -4,33 +4,34 @@
 
 ## 功能特性
 
-- 前后台一体化：前台博客展示，后台内容管理
-- 多数据库支持：`SQLite / MySQL / PostgreSQL`
-- Redis 可选：支持 Session 存储、缓存、阅读量增量同步
-- 文章管理：草稿、发布、置顶、分类、标签、封面、预览
-- 独立页面管理
-- 附件库与本地上传目录同步
-- 站点设置：站点信息、导航菜单、轮播图、友情链接
-- 前台能力：归档、搜索、分类页、标签页、友情链接页
-- Feed 能力：`/rss.xml`、`/sitemap.xml`
-- 内容展示增强：
-  - 代码高亮
-  - KaTeX 数学公式
-  - Mermaid 图表
-  - DOMPurify 内容净化
-- 深浅色主题切换
+- **前后台一体化**：前台博客展示，后台内容管理
+- **现代响应式设计**：受 iOS 启发，适配 PC、平板与手机端，包含移动端底部导航栏
+- **多数据库支持**：`SQLite / MySQL / PostgreSQL`
+- **安全加固**：
+  - **CSRF 防护**：防止跨站请求伪造
+  - **XSS 过滤**：对文章与页面内容进行双重清洗
+  - **安全头注入**：使用 `Helmet` 强化浏览器安全头
+  - **频率限制**：对登录等敏感接口进行 Rate Limiting
+- **Redis 可选**：支持 Session 存储、缓存、阅读量增量同步
+- **文章管理**：草稿、发布、置顶、分类、标签、封面、实时同步预览
+- **独立页面管理**
+- **附件库**：支持本地上传、图片压缩、多选删除、同步本地目录
+- **站点设置**：站点信息、导航菜单配置、轮播图管理、友情链接
+- **前台能力**：归档、搜索、分类页、标签页、友情链接页
+- **Feed 能力**：`/rss.xml`、`/sitemap.xml`
+- **内容展示增强**：代码高亮、KaTeX 数学公式、Mermaid 图表
+- **深浅色主题**：手动切换设计，随系统自动适应
 
 ## 技术栈
 
-- 服务端：`Node.js`、`Express`
-- 模板引擎：`EJS`
-- ORM：`Sequelize`
-- 数据库驱动：`sqlite3`、`mysql2`、`pg`
-- 会话：`express-session`、`connect-redis`
-- Redis 客户端：`ioredis`
-- 上传：`multer`
-- 日志：`morgan`
-- 方法覆写：`method-override`
+- **服务端**：`Node.js`, `Express`
+- **模板引擎**：`EJS`
+- **ORM**：`Sequelize`
+- **安全增强**：`bcryptjs`, `jsonwebtoken`, `helmet`, `csurf`, `express-rate-limit`, `sanitize-html`
+- **数据库驱动**：`sqlite3`, `mysql2`, `pg`
+- **会话/缓存**：`express-session`, `connect-redis`, `ioredis`
+- **上传处理**：`multer`, `sharp` (图片压缩)
+- **工具库**：`marked`, `zod`, `slugify`
 
 ## 快速开始
 
@@ -48,7 +49,8 @@ npm install
 
 ```env
 PORT=3000
-SESSION_SECRET=your-secret-key-change-this
+SESSION_SECRET=your-session-secret-at-least-16-chars
+JWT_SECRET=your-jwt-secret-at-least-16-chars
 
 DB_DIALECT=sqlite
 DB_STORAGE=./database.sqlite
@@ -56,11 +58,9 @@ DB_STORAGE=./database.sqlite
 REDIS_ENABLED=true
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=
 
 SITE_TITLE=Memo
 SITE_DESCRIPTION=分享技术与生活
-SITE_KEYWORDS=博客,技术,生活
 ```
 
 ### 3. 初始化项目
@@ -69,186 +69,40 @@ SITE_KEYWORDS=博客,技术,生活
 npm run init
 ```
 
-初始化脚本会：
-
-- 创建数据库表
-- 创建默认管理员账号
-- 初始化站点设置
-- 初始化示例分类、标签、文章
-- 自动补充默认轮播图数据
-
-默认管理员账号：
-
-- 用户名：`admin`
-- 密码：`admin123456`
-
-首次登录后请立即修改密码。
+初始化脚本会：创建数据库表、创建默认管理员账号（`admin`/`admin123456`）、初始化站点设置、示例数据等。
 
 ### 4. 启动项目
 
-开发模式：
-
-```bash
-npm run dev
-```
-
-生产模式：
-
-```bash
-npm start
-```
-
-启动后访问：
-
-- 前台：`http://localhost:3000`
-- 后台：`http://localhost:3000/admin`
+开发模式：`npm run dev` | 生产模式：`npm start`
 
 ## 环境变量说明
 
-### 应用
-
 - `PORT`：服务端口
-- `SESSION_SECRET`：Session 密钥
-
-### 数据库
-
+- `SESSION_SECRET`：Session 签名密钥
+- `JWT_SECRET`：API JWT 签名密钥
 - `DB_DIALECT`：`sqlite` / `mysql` / `postgres`
-- `DB_STORAGE`：SQLite 文件路径
-- `DB_HOST`
-- `DB_PORT`
-- `DB_NAME`
-- `DB_USER`
-- `DB_PASSWORD`
+- `REDIS_ENABLED`：设为 `false` 可完全禁用 Redis
 
-### Redis
+## 数据库与 Redis
 
-- `REDIS_ENABLED`：设为 `false` 时禁用 Redis
-- `REDIS_HOST`
-- `REDIS_PORT`
-- `REDIS_PASSWORD`
-
-### 默认站点信息
-
-- `SITE_TITLE`
-- `SITE_DESCRIPTION`
-- `SITE_KEYWORDS`
-
-## 数据库说明
-
-项目通过 Sequelize 统一适配数据库。
-
-### SQLite
-
-适合本地开发、单机部署、快速试用：
-
-```env
-DB_DIALECT=sqlite
-DB_STORAGE=./database.sqlite
-```
-
-### MySQL
-
-适合常规生产环境：
-
-```env
-DB_DIALECT=mysql
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=blog
-DB_USER=root
-DB_PASSWORD=123456
-```
-
-### PostgreSQL
-
-同样支持：
-
-```env
-DB_DIALECT=postgres
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=blog
-DB_USER=postgres
-DB_PASSWORD=123456
-```
-
-## Redis 说明
-
-Redis 不是强制依赖。
-
-当 `REDIS_ENABLED=true` 时：
-
-- Session 使用 Redis Store
-- 缓存能力开启
-- 阅读量会按间隔同步回数据库
-
-当 `REDIS_ENABLED=false` 时：
-
-- Session 回退到内存存储
-- 缓存逻辑跳过
-- 项目仍可运行
-
-禁用示例：
-
-```env
-REDIS_ENABLED=false
-```
-
-## 主要路由
-
-### 前台
-
-- `/`：首页
-- `/archive`：归档
-- `/search`：搜索
-- `/links`：友情链接
-- `/category/:slug`：分类页
-- `/tag/:slug`：标签页
-- `/article/:slug`：文章详情
-- `/p/:slug`：独立页面
-- `/article-preview`：文章预览页
-- `/rss.xml`：RSS
-- `/sitemap.xml`：站点地图
-
-### 后台
-
-- `/admin`：仪表盘
-- `/admin/articles`：文章管理
-- `/admin/pages`：页面管理
-- `/admin/taxonomy`：分类/标签管理
-- `/admin/media`：附件库
-- `/admin/settings`：站点设置
-- `/admin/profile`：个人资料
-
-## 上传与静态文件
-
-- 上传目录：`uploads/`
-- 静态资源目录：`public/`
-- 上传文件通过 `/uploads` 暴露
-- 项目启动时会自动确保上传目录存在
+项目默认支持 **SQLite** 以便快速上手。在生产环境下推荐使用 **MySQL** 和 **Redis**。
+当 `REDIS_ENABLED=true` 时，系统将开启缓存层与阅读量延迟落库机制，大幅提升访问性能。
 
 ## 项目结构
 
 ```text
 .
-├─ app.js
-├─ init.js
-├─ package.json
-├─ config/
-│  ├─ database.js
-│  ├─ redis.js
-│  └─ uploadsPath.js
-├─ controllers/
-├─ middleware/
-├─ models/
-├─ routes/
-├─ utils/
-├─ views/
-├─ public/
-│  ├─ css/
-│  ├─ fonts/
-│  └─ libs/
-└─ uploads/
+├─ app.js           # 入口
+├─ config/          # 数据库、Redis、上传路径配置
+├─ controllers/     # 业务逻辑
+├─ middleware/      # 鉴权、安全、上传中间件
+├─ models/          # 数据库模型
+├─ public/          # 静态资源 (CSS, JS, Fonts, Libs)
+├─ routes/          # 路由定义
+├─ services/        # 核心服务 (Media, Sidebar)
+├─ utils/           # 工具函数 (Sanitizer, Cache, Settings)
+├─ views/           # EJS 模板
+└─ uploads/         # 上传存放目录
 ```
 
 ## 生产运行
