@@ -1,41 +1,11 @@
-.category-hero {
-  background: linear-gradient(135deg, var(--accent) 0%, #ff9966 100%);
-  border-radius: var(--border-radius-xl);
-  padding: var(--space-2xl);
-  margin-bottom: var(--space-xl);
-  position: relative;
-  overflow: hidden;
-}
-.category-hero::before {
-  content: '';
-  position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-}
-.category-hero-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-}
-.category-hero-name {
-  font-size: 32px;
-  font-weight: 800;
-  color: white;
-  letter-spacing: -0.5px;
-  margin-bottom: 6px;
-}
-.category-hero-count {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.8);
-}
+/* ============================================================
+   CATEGORY / TAG PAGE
+   引用：/category* /tag* 路由（通过 head.ejs 按页加载）
+============================================================ */
 
+
+
+/* Tag chip filter */
 .tag-chip-filter {
   padding: 5px 13px;
   border-radius: var(--border-radius-pill);
@@ -54,6 +24,10 @@
   color: var(--accent);
   border-color: transparent;
 }
+
+
+
+/* Category article card (card style) */
 .category-article-list {
   display: flex;
   flex-direction: column;

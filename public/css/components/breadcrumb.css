@@ -1,0 +1,22 @@
+/* ============================================================
+   BREADCRUMB
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 20px;
+}
+.breadcrumb a {
+  color: var(--text-tertiary);
+  text-decoration: none;
+}
+.breadcrumb a:hover {
+  color: var(--accent);
+}
+.breadcrumb-sep {
+  color: var(--surface-border);
+}

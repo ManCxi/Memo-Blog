@@ -1,0 +1,89 @@
+/* ============================================================
+   MOBILE SEARCH OVERLAY
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--surface-1-bg);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-100%);
+  opacity: 0;
+  transition:
+    transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 0.32s ease;
+  pointer-events: none;
+}
+.search-overlay.open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+.search-overlay-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px var(--space-md);
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  background: var(--navbar-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--surface-border);
+  flex-shrink: 0;
+}
+.search-overlay-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-3-bg);
+  border: 1.5px solid var(--surface-border);
+  border-radius: var(--border-radius-pill);
+  padding: 9px 14px;
+  transition: border-color 0.2s;
+}
+.search-overlay-field:focus-within {
+  border-color: var(--accent);
+  background: var(--surface-1-bg);
+}
+.search-overlay-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+.search-overlay-cancel {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 4px 2px;
+  white-space: nowrap;
+}
+.search-overlay-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+}
+.search-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: var(--space-2xl) var(--space-lg);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+.search-hint-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+.search-hint-text {
+  font-size: 15px;
+  color: var(--text-tertiary);
+}

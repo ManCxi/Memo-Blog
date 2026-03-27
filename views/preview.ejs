@@ -1,20 +1,7 @@
 <%- include('partials/head', { title: '文章预览' }) %>
 <%- include('partials/nav') %>
-<style>
-  #previewContent {
-    font-size: 17px;
-    line-height: 1.9;
-  }
-  #previewContent pre,
-  #previewContent pre code,
-  #previewContent pre code.hljs,
-  #previewContent .hljs {
-    font-size: 16px !important;
-    line-height: 1.7;
-  }
-</style>
 
-<main class="page-container" style="padding-top: 20px;">
+<main class="page-container animate-fade-in-up">
   <!-- Breadcrumb -->
   <div class="breadcrumb">
     <a href="javascript:;">🏠 首页</a>
@@ -26,15 +13,15 @@
 
   <div class="article-layout">
     <!-- Main content -->
-    <div style="min-width:0;">
+    <div class="article-main-col">
       <div class="article-detail-card">
         <div id="previewCoverContainer">
            <div class="article-detail-cover article-cover-placeholder" style="background:linear-gradient(135deg,var(--accent),var(--accent-light));display:flex;align-items:center;justify-content:center;font-size:60px;">📝</div>
         </div>
         
-        <div class="article-detail-body" style="padding:var(--space-xl);">
+        <div class="article-detail-body">
           <!-- Badges -->
-          <div class="article-header-tags" id="previewBadges" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+          <div class="article-header-tags" id="previewBadges">
             <span class="badge badge-accent">预览模式</span>
           </div>
 
@@ -48,7 +35,7 @@
           </div>
 
           <!-- Content -->
-          <div class="prose article-prose" id="previewContent">
+          <div class="prose article-prose" id="articleContent">
             请在后台输入内容以预览...
           </div>
 
@@ -58,7 +45,7 @@
         </div>
       </div>
 
-      <!-- Prev / Next Demo -->
+      <!-- Prev / Next Demo (Greyed out for preview) -->
       <div class="article-nav" style="opacity: 0.5; pointer-events: none;">
         <div>
           <a href="javascript:;" class="article-nav-card">
@@ -77,17 +64,15 @@
 
     <!-- Sidebar: TOC -->
     <aside class="article-aside-sticky">
+      <!-- Table of contents -->
       <div class="toc-card" id="toc" style="display:none;">
-        <div style="padding:14px 16px;border-bottom:1px solid var(--surface-border);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-tertiary);">目录</div>
-        <div id="tocList" style="padding:8px;max-height:60vh;overflow-y:auto;font-size:13px;"></div>
+        <div class="toc-title">目录</div>
+        <div id="tocList" class="toc-list"></div>
       </div>
 
       <!-- Back to top -->
-      <div style="margin-top:16px;text-align:center;">
-        <button onclick="window.scrollTo({top:0,behavior:'smooth'})"
-          style="width:100%;padding:10px;border-radius:14px;background:var(--surface-3-bg);border:1px solid var(--surface-border);color:var(--text-secondary);cursor:pointer;font-size:13px;font-weight:500;transition:background 0.15s;"
-          onmouseover="this.style.background='var(--accent-tint)';this.style.color='var(--accent)'"
-          onmouseout="this.style.background='var(--surface-3-bg)';this.style.color='var(--text-secondary)'">
+      <div class="toc-backtop-wrap">
+        <button class="toc-backtop-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">
           ⬆️ 回到顶部
         </button>
       </div>
@@ -98,11 +83,6 @@
 <%- include('partials/footer') %>
 
 <script src="/libs/dompurify/purify.min.js"></script>
-<script src="/libs/highlightjs/highlight.min.js"></script>
-<script src="/libs/mermaid/mermaid.min.js"></script>
-<script src="/libs/katex/katex.min.js"></script>
-<script src="/libs/katex/contrib/auto-render.min.js"></script>
-
 <script>
 // ── 实时预览监听 ──
 window.addEventListener('message', async (event) => {
@@ -134,35 +114,35 @@ window.addEventListener('message', async (event) => {
   badgesBox.innerHTML = badgesHtml;
 
   // 4. 更新正文
-  const previewContent = document.getElementById('previewContent');
+  const articleContent = document.getElementById('articleContent');
   let cleanHtml = DOMPurify.sanitize(content || '', {
     ADD_TAGS: ['iframe', 'style', 'script'],
     ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
   });
-  previewContent.innerHTML = cleanHtml;
+  articleContent.innerHTML = cleanHtml;
 
   // 5. 更新标签
   const tagsBox = document.getElementById('previewTags');
   if (tagNames && tagNames.length) {
-    tagsBox.style.display = 'block';
-    tagsBox.innerHTML = '<span style="font-size:13px;color:var(--text-tertiary);margin-right:4px;">🏷️</span>' + 
+    tagsBox.style.display = 'flex';
+    tagsBox.innerHTML = '<span class="article-tags-icon">🏷️</span>' + 
       tagNames.map(t => `<span class="badge-tag"># ${t}</span>`).join('');
   } else {
     tagsBox.style.display = 'none';
   }
 
   // 6. 重新高亮代码
-  document.querySelectorAll('pre code').forEach((block) => {
-    if (window.hljs) {
-       block.removeAttribute('data-highlighted');
+  if (window.hljs) {
+    articleContent.querySelectorAll('pre code').forEach((block) => {
+       block.removeAttribute('data-highlighted'); // 强制重绘
        hljs.highlightElement(block);
-    }
-  });
+    });
+  }
 
   // 7. 重新渲染 KaTeX
   if (window.renderMathInElement) {
     try {
-      renderMathInElement(previewContent, {
+      renderMathInElement(articleContent, {
         delimiters: [
           {left: '$$', right: '$$', display: true},
           {left: '$', right: '$', display: false}
@@ -172,22 +152,41 @@ window.addEventListener('message', async (event) => {
     } catch {}
   }
 
-  // 8. 重新初始化 Mermaid
-  if (typeof mermaid !== 'undefined') {
-    mermaid.init(undefined, document.querySelectorAll('.language-mermaid'));
-  }
+  // 8. 重新初始化 Mermaid + 装饰代码块
+  if (window.mermaid) {
+    // 转换 mermaid 源码为 div.mermaid
+    articleContent.querySelectorAll('code.language-mermaid').forEach(el => {
+      const pre = el.parentElement;
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = el.textContent;
+      pre.replaceWith(div);
+    });
 
-  // 9. 重新生成目录
-  generateTOC();
+    const runResult = mermaid.run();
+    const afterMermaid = () => {
+      if (typeof initArticleCodeCopy === 'function') initArticleCodeCopy();
+      generateTOC();
+    };
+
+    if (runResult && typeof runResult.then === 'function') {
+      runResult.then(afterMermaid).catch(afterMermaid);
+    } else {
+      afterMermaid();
+    }
+  } else {
+    if (typeof initArticleCodeCopy === 'function') initArticleCodeCopy();
+    generateTOC();
+  }
 });
 
 function generateTOC() {
-  const content = document.getElementById('previewContent');
+  const content = document.getElementById('articleContent');
   const tocList = document.getElementById('tocList');
   const toc = document.getElementById('toc');
   if (!content || !tocList) return;
   
-  tocList.innerHTML = ''; // 清空
+  tocList.innerHTML = '';
   const headings = content.querySelectorAll('h2, h3, h4');
   if (headings.length < 2) {
     toc.style.display = 'none';
@@ -195,22 +194,50 @@ function generateTOC() {
   }
 
   toc.style.display = '';
+  const anchors = [];
   headings.forEach((h, i) => {
     const id = 'h-' + i;
     h.id = id;
     const a = document.createElement('a');
     a.href = '#' + id;
     a.textContent = h.textContent;
-    const indent = h.tagName === 'H2' ? 0 : h.tagName === 'H3' ? 14 : 28;
-    a.style.cssText = `display:block;padding:5px 10px 5px ${10+indent}px;border-radius:8px;color:var(--text-secondary);text-decoration:none;font-size:${h.tagName === 'H2' ? '13px' : '12px'};transition:all 0.15s;${h.tagName === 'H2' ? 'font-weight:500;' : ''}`;
-    a.onclick = (e) => {
+    a.dataset.id = id;
+    const level = h.tagName === 'H2' ? 2 : h.tagName === 'H3' ? 3 : 4;
+    a.className = `toc-link toc-level-${level}`;
+    a.addEventListener('click', e => {
       e.preventDefault();
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+    });
     tocList.appendChild(a);
+    anchors.push({ id, el: h, a });
   });
+
+  // TOC 高亮监听
+  let activeId = null;
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        if (activeId !== id) {
+          anchors.forEach(({ id: aid, a }) => {
+            if (aid === id) {
+              a.classList.add('active');
+              // 自动滚动目录，确保当前项可见
+              a.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+              a.classList.remove('active');
+            }
+          });
+          activeId = id;
+        }
+      }
+    });
+  }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+  headings.forEach(h => observer.observe(h));
 }
 
 // 告诉父窗口已就绪
 window.parent.postMessage({ type: 'PREVIEW_READY' }, '*');
 </script>
+
+

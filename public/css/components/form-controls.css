@@ -1,0 +1,18 @@
+/* ============================================================
+   FORM CONTROLS
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+.form-control {
+  padding: 10px 16px;
+  font-size: 14px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius-pill);
+  background: var(--surface-1-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.form-control:focus {
+  outline: none;
+  border-color: var(--accent);
+}

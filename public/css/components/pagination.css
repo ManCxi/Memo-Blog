@@ -1,0 +1,45 @@
+/* ============================================================
+   PAGINATION
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+.page-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--surface-1-bg);
+  border: 1px solid var(--surface-border);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  cursor: pointer;
+}
+.page-btn:hover {
+  background: var(--accent-tint);
+  color: var(--accent);
+  border-color: rgba(255, 107, 53, 0.2);
+}
+.page-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.page-btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}

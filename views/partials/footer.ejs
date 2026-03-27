@@ -107,7 +107,7 @@
 <script src="/libs/katex/katex.min.js" defer></script>
 <script src="/libs/katex/contrib/auto-render.min.js" defer></script>
 <script>
-  // 文章详情：代码块 mac 风格顶栏 + 复制 / 折叠（须在 Mermaid 改写 DOM 之后执行）
+  // 将 initArticleCodeCopy 暴露到全局，以便预览页也能调用
   function initArticleCodeCopy() {
     var root = document.getElementById('articleContent');
     if (!root) return;
@@ -209,73 +209,76 @@
     });
   }
 
-  // 代码高亮
-  if (window.hljs) {
-    document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
-  }
+  // 确保所有 deferred libs 加载后再执行
+  document.addEventListener('DOMContentLoaded', function() {
+    // 1. 代码高亮
+    if (window.hljs) {
+      document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+    }
 
-  // KaTeX 数学公式
-  if (window.renderMathInElement) {
-    renderMathInElement(document.body, {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '$', right: '$', display: false }
-      ],
-      throwOnError: false
-    });
-  }
+    // 2. KaTeX 数学公式
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false
+      });
+    }
 
-  // Mermaid 图表
-  if (window.mermaid) {
-    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
-    mermaid.initialize({ startOnLoad: false, theme });
-    document.querySelectorAll('code.language-mermaid').forEach(el => {
-      const pre = el.parentElement;
-      const div = document.createElement('div');
-      div.className = 'mermaid';
-      div.textContent = el.textContent;
-      pre.replaceWith(div);
-    });
-    const runResult = mermaid.run();
-    const afterMermaid = () => initArticleCodeCopy();
-    if (runResult && typeof runResult.then === 'function') {
-      runResult.then(afterMermaid).catch(afterMermaid);
+    // 3. Mermaid 图表 + 代码装饰
+    if (window.mermaid) {
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
+      mermaid.initialize({ startOnLoad: false, theme });
+      document.querySelectorAll('code.language-mermaid').forEach(el => {
+        const pre = el.parentElement;
+        const div = document.createElement('div');
+        div.className = 'mermaid';
+        div.textContent = el.textContent;
+        pre.replaceWith(div);
+      });
+      const runResult = mermaid.run();
+      const afterMermaid = () => initArticleCodeCopy();
+      if (runResult && typeof runResult.then === 'function') {
+        runResult.then(afterMermaid).catch(afterMermaid);
+      } else {
+        afterMermaid();
+      }
     } else {
-      afterMermaid();
+      initArticleCodeCopy();
     }
-  } else {
-    initArticleCodeCopy();
-  }
 
-  // 运行时间
-  (function () {
-    const runSince = '<%= (settings && settings.run_since) ? settings.run_since : new Date().getFullYear() + "-01-01" %>';
-    const start = new Date(runSince).getTime();
-    function update() {
-      const s = Math.floor((Date.now() - start) / 1000);
-      if (s < 0) return;
-      const d = Math.floor(s / 86400);
-      const h = String(Math.floor((s % 86400) / 3600)).padStart(2, '0');
-      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-      const sec = String(s % 60).padStart(2, '0');
-      const el = document.getElementById('runTime');
-      if (el) el.textContent = d + ' 天 ' + h + ':' + m + ':' + sec;
-    }
-    update(); setInterval(update, 1000);
-  })();
+    // 4. 运行时间
+    (function () {
+      const runSince = '<%= (settings && settings.run_since) ? settings.run_since : new Date().getFullYear() + "-01-01" %>';
+      const start = new Date(runSince).getTime();
+      function update() {
+        const s = Math.floor((Date.now() - start) / 1000);
+        if (s < 0) return;
+        const d = Math.floor(s / 86400);
+        const h = String(Math.floor((s % 86400) / 3600)).padStart(2, '0');
+        const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+        const sec = String(s % 60).padStart(2, '0');
+        const el = document.getElementById('runTime');
+        if (el) el.textContent = d + ' 天 ' + h + ':' + m + ':' + sec;
+      }
+      update(); setInterval(update, 1000);
+    })();
 
-  // 回到顶部按钮
-  (function () {
-    const btn = document.getElementById('scrollTopBtn');
-    if (!btn) return;
-    function update() {
-      btn.classList.toggle('visible', window.scrollY > 400);
-    }
-    window.addEventListener('scroll', update, { passive: true });
-    update();
-  })();
+    // 5. 回到顶部按钮
+    (function () {
+      const btn = document.getElementById('scrollTopBtn');
+      if (!btn) return;
+      function update() {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+  });
 
-  // 暗黑模式切换
+  // 暗黑模式切换保持独立
   function toggleTheme() {
     const html = document.documentElement;
     const current = html.getAttribute('data-theme') || 'light';
@@ -283,16 +286,24 @@
     html.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
     // 切换代码高亮主题
-    const link = document.getElementById('hlTheme');
-    if (link) link.href = next === 'dark'
-      ? '/libs/highlightjs/styles/atom-one-dark.min.css'
-      : '/libs/highlightjs/styles/atom-one-light.min.css';
+    const darkLink = document.getElementById('hl-dark');
+    const lightLink = document.getElementById('hl-light');
+    if (darkLink && lightLink) {
+      if (next === 'dark') {
+        darkLink.disabled = false;
+        lightLink.disabled = true;
+      } else {
+        darkLink.disabled = true;
+        lightLink.disabled = false;
+      }
+    }
     // 更新切换按钮图标
     document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
       btn.textContent = next === 'dark' ? '☀️' : '🌙';
     });
   }
 </script>
+
 </body>
 
 </html>

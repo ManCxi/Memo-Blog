@@ -1,0 +1,104 @@
+/* ============================================================
+   MOBILE TAB BAR
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  height: var(--tab-bar-height);
+  background: var(--navbar-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid var(--surface-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+@media (min-width: 768px) {
+  .tab-bar {
+    display: none;
+  }
+}
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+.tab-item .tab-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.tab-item .tab-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  transition: color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab-item.active .tab-icon {
+  transform: scale(1.1) translateY(-1px);
+}
+.tab-item.active .tab-label {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ============================================================
+   SCROLL TO TOP BUTTON
+============================================================ */
+.scroll-top-btn {
+  position: fixed;
+  bottom: calc(var(--tab-bar-height) + 16px);
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  border: 1px solid var(--surface-border);
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
+  z-index: 9998;
+  opacity: 0;
+  transform: translateY(10px) scale(0.9);
+  transition: all 0.3s;
+  font-size: 18px;
+  pointer-events: none;
+}
+.scroll-top-btn.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+.scroll-top-btn:hover {
+  background: var(--accent-light);
+  transform: scale(1.1) translateY(-2px);
+}
+@media (min-width: 768px) {
+  .scroll-top-btn {
+    bottom: 24px;
+  }
+}

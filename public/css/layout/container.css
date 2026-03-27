@@ -1,0 +1,55 @@
+/* ============================================================
+   CONTAINER & PAGE LAYOUT
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+.container {
+  width: 100%;
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+@media (min-width: 768px) {
+  .container {
+    padding: 0 var(--space-xl);
+  }
+}
+@media (min-width: 1280px) {
+  .container {
+    padding: 0 var(--space-2xl);
+  }
+}
+
+.page-container {
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 24px 1rem;
+  padding-bottom: calc(var(--tab-bar-height) + 24px);
+}
+@media (min-width: 640px) {
+  .page-container {
+    padding: 32px 1.5rem;
+    padding-bottom: 32px;
+  }
+}
+@media (min-width: 768px) {
+  .page-container {
+    padding-bottom: 32px;
+  }
+}
+@media (min-width: 1280px) {
+  .page-container {
+    padding: 32px 3rem;
+  }
+}
+
+.article-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (min-width: 1280px) {
+  .article-layout {
+    grid-template-columns: 1fr 220px;
+  }
+}

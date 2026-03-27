@@ -41,7 +41,11 @@
       : (path.startsWith('/links') ? 'links'
       : (path.startsWith('/archive') ? 'archive'
       : (path.startsWith('/category') ? 'category'
-      : (path.startsWith('/article') ? 'article' : ''))));
+      : (path.startsWith('/tag') ? 'category'
+      : (path.startsWith('/article') ? 'article'
+      : (path.startsWith('/search') ? 'search'
+      : (path.startsWith('/p/') ? 'page'
+      : (path === '/404' ? '404' : ''))))))));
   %>
   <% if (pageKey) { %>
   <link rel="stylesheet" href="/css/pages/<%= pageKey %>.css">

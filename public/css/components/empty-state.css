@@ -1,0 +1,22 @@
+/* ============================================================
+   EMPTY STATE
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--surface-2-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: 24px;
+  color: var(--text-secondary);
+}
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+.empty-state p {
+  font-size: 14px;
+  margin: 0;
+}

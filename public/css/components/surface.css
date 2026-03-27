@@ -1,0 +1,27 @@
+/* ============================================================
+   SURFACE UTILITY CLASSES
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+.surface-1 {
+  background: var(--surface-1-bg);
+  border: 1px solid var(--surface-border);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--surface-shadow-1);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.surface-2 {
+  background: var(--surface-2-bg);
+  border: 1px solid var(--surface-border);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  box-shadow: var(--surface-shadow-2);
+}
+.surface-3 {
+  background: var(--surface-3-bg);
+  border: 1px solid var(--surface-border-2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}

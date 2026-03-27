@@ -1,0 +1,147 @@
+/* ============================================================
+   DARK MODE OVERRIDES
+   引用：所有页面（通过 main.css @import）
+============================================================ */
+[data-theme='dark'] {
+  --surface-1-bg: #1c1c1e;
+  --surface-2-bg: rgba(28, 28, 30, 0.95);
+  --surface-3-bg: rgba(44, 44, 46, 0.95);
+  --surface-border: rgba(255, 255, 255, 0.12);
+  --surface-border-2: rgba(255, 255, 255, 0.08);
+  --navbar-bg: rgba(28, 28, 30, 0.92);
+  --text-primary: #f2f2f7;
+  --text-secondary: rgba(235, 235, 245, 0.6);
+  --text-tertiary: rgba(235, 235, 245, 0.4);
+  --surface-shadow-1:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+[data-theme='dark'] body {
+  background: #111113;
+}
+
+/* Prose */
+[data-theme='dark'] .prose {
+  color: var(--text-primary);
+}
+[data-theme='dark'] .prose h1,
+[data-theme='dark'] .prose h2,
+[data-theme='dark'] .prose h3,
+[data-theme='dark'] .prose h4 {
+  color: var(--text-primary);
+}
+[data-theme='dark'] .prose a {
+  color: var(--accent-light);
+}
+[data-theme='dark'] .prose pre {
+  background: #2c2c2e;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme='dark'] .article-prose .code-block-wrapper,
+[data-theme='dark'] .article-prose .code-block-wrapper pre {
+  background: #282c34;
+  border-color: transparent;
+}
+[data-theme='dark'] .article-prose .code-block-chrome {
+  background: linear-gradient(180deg, #3d424e 0%, #383c48 100%);
+}
+[data-theme='dark'] .prose blockquote {
+  border-color: var(--accent);
+  background: rgba(255, 107, 53, 0.08);
+}
+[data-theme='dark'] .prose code:not(pre code) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff8c5a;
+}
+[data-theme='dark'] .prose table th {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Navbar & Footer */
+[data-theme='dark'] .navbar {
+  background: rgba(28, 28, 30, 0.92);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .site-footer {
+  background: #1c1c1e;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Archive */
+[data-theme='dark'] .archive-year-chip {
+  background: #2c2c2e;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #f2f2f7;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+[data-theme='dark'] .archive-item {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .archive-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-theme='dark'] .archive-item-date {
+  color: rgba(235, 235, 245, 0.6);
+}
+[data-theme='dark'] .archive-item-dot {
+  border-color: rgba(235, 235, 245, 0.3);
+}
+[data-theme='dark'] .archive-item-title {
+  color: #f2f2f7;
+}
+[data-theme='dark'] .archive-item-cat {
+  background: #2c2c2e;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(235, 235, 245, 0.6);
+}
+
+[data-theme='dark'] .archive-match-hero {
+  background: #1c1c1e;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+[data-theme='dark'] .archive-match-title {
+  color: #f2f2f7;
+}
+[data-theme='dark'] .archive-match-subtitle {
+  color: rgba(235, 235, 245, 0.6);
+}
+[data-theme='dark'] .archive-match-year {
+  color: #f2f2f7;
+}
+[data-theme='dark'] .archive-match-year-line {
+  background: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .archive-match-year-count {
+  color: rgba(235, 235, 245, 0.6);
+}
+[data-theme='dark'] .archive-match-list {
+  background: #1c1c1e;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .archive-match-item {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .archive-match-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-theme='dark'] .archive-match-date {
+  color: rgba(235, 235, 245, 0.6);
+}
+[data-theme='dark'] .archive-match-dot {
+  border-color: rgba(235, 235, 245, 0.3);
+}
+[data-theme='dark'] .archive-match-item-title {
+  color: #f2f2f7;
+}
+[data-theme='dark'] .archive-match-category {
+  background: #2c2c2e;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(235, 235, 245, 0.6);
+}
+
+/* Theme toggle */
+[data-theme='dark'] .theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}

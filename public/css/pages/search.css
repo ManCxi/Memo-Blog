@@ -1,0 +1,11 @@
+/* ============================================================
+   SEARCH RESULTS PAGE
+   引用：/search* 路由（通过 head.ejs 按页加载）
+============================================================ */
+
+/* Search hero */
+.search-hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+

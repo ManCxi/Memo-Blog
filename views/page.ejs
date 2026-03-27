@@ -83,8 +83,13 @@
         const id = entry.target.id;
         if (activeId !== id) {
           anchors.forEach(({ id: aid, a }) => {
-            if (aid === id) a.classList.add('active');
-            else a.classList.remove('active');
+            if (aid === id) {
+              a.classList.add('active');
+              // 自动滚动目录，确保当前项可见
+              a.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+              a.classList.remove('active');
+            }
           });
           activeId = id;
         }
