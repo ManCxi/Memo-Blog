@@ -45,5 +45,5 @@ module.exports = {
   ensureUploadsDir,
   resolveUploadDiskPath,
   getDateDirectory,
-  getRelativeUploadPath
+  getRelativeUploadPath,
 };

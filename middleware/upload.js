@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     cb(null, name);
-  }
+  },
 });
 
 const fileFilter = (req, file, cb) => {
@@ -35,7 +35,10 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    fieldSize: 10 * 1024 * 1024,
+  },
 });
 
 module.exports = upload;

@@ -11,7 +11,7 @@ function flattenCategoryTree(categoryRows) {
     byParent[p].push(c);
   }
   for (const arr of Object.values(byParent)) {
-    arr.sort((a, b) => (a.sort - b.sort) || (a.id - b.id));
+    arr.sort((a, b) => a.sort - b.sort || a.id - b.id);
   }
   const out = [];
   const walk = (pid, depth) => {
@@ -27,11 +27,17 @@ function flattenCategoryTree(categoryRows) {
 // 分类列表
 exports.index = async (req, res) => {
   try {
-    const categories = await Category.findAll({ order: [['sort', 'ASC'], ['id', 'ASC']], include: [{ association: 'articles', attributes: ['id'] }] });
+    const categories = await Category.findAll({
+      order: [
+        ['sort', 'ASC'],
+        ['id', 'ASC'],
+      ],
+      include: [{ association: 'articles', attributes: ['id'] }],
+    });
     res.render('admin/taxonomy/index', {
       title: '分类管理',
       categories,
-      categoriesFlat: flattenCategoryTree(categories)
+      categoriesFlat: flattenCategoryTree(categories),
     });
   } catch (err) {
     console.error(err);
@@ -59,7 +65,13 @@ exports.create = async (req, res) => {
     }
 
     const slug = slugify(name, { lower: true, strict: true }) || `cat-${Date.now()}`;
-    const category = await Category.create({ name, slug, description, sort: parseInt(sort) || 0, parentId: parentId ? parseInt(parentId) : null });
+    const category = await Category.create({
+      name,
+      slug,
+      description,
+      sort: parseInt(sort) || 0,
+      parentId: parentId ? parseInt(parentId) : null,
+    });
 
     await cache.del('sidebar:data');
     if (isAjax) return res.json({ ok: true, category });
@@ -77,7 +89,12 @@ exports.create = async (req, res) => {
 // 分类列表 JSON
 exports.listApi = async (req, res) => {
   try {
-    const categories = await Category.findAll({ order: [['sort', 'ASC'], ['id', 'ASC']] });
+    const categories = await Category.findAll({
+      order: [
+        ['sort', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
     res.json({ ok: true, categories });
   } catch (err) {
     res.json({ ok: false, message: err.message });
@@ -95,7 +112,13 @@ exports.update = async (req, res) => {
 
     const { name, description, sort, parentId } = req.body;
     const slug = slugify(name, { lower: true, strict: true }) || category.slug;
-    await category.update({ name, slug, description, sort: parseInt(sort) || 0, parentId: parentId ? parseInt(parentId) : null });
+    await category.update({
+      name,
+      slug,
+      description,
+      sort: parseInt(sort) || 0,
+      parentId: parentId ? parseInt(parentId) : null,
+    });
 
     await cache.del('sidebar:data');
     req.session.success = '分类更新成功';

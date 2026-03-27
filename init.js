@@ -5,38 +5,47 @@
  */
 require('dotenv').config();
 const { sequelize, User, Category, Tag, Article, Setting } = require('./models');
+const crypto = require('crypto');
 
 const DEFAULT_SETTINGS = [
   { key: 'site_name', value: JSON.stringify(process.env.SITE_TITLE || '我的博客') },
-  { key: 'site_description', value: JSON.stringify(process.env.SITE_DESCRIPTION || '分享技术与生活') },
+  {
+    key: 'site_description',
+    value: JSON.stringify(process.env.SITE_DESCRIPTION || '分享技术与生活'),
+  },
   { key: 'site_url', value: JSON.stringify('http://localhost:3000') },
   { key: 'site_keywords', value: JSON.stringify(process.env.SITE_KEYWORDS || '博客,技术,生活') },
   { key: 'icp', value: JSON.stringify('') },
-  { key: 'copyright', value: JSON.stringify(`© ${new Date().getFullYear()} My Blog. All rights reserved.`) },
+  {
+    key: 'copyright',
+    value: JSON.stringify(`© ${new Date().getFullYear()} My Blog. All rights reserved.`),
+  },
   { key: 'run_since', value: JSON.stringify(new Date().toISOString().slice(0, 10)) },
   { key: 'head_code', value: JSON.stringify('') },
   { key: 'google_site_verification', value: JSON.stringify('') },
   { key: 'bing_site_verification', value: JSON.stringify('') },
   { key: 'baidu_site_verification', value: JSON.stringify('') },
   {
-    key: 'blogger_info', value: JSON.stringify({
+    key: 'blogger_info',
+    value: JSON.stringify({
       nickname: '博主',
       avatar: '',
       bio: '热爱技术，热爱生活',
       github: '',
       twitter: '',
-      website: ''
-    })
+      website: '',
+    }),
   },
   {
-    key: 'nav_menus', value: JSON.stringify([
+    key: 'nav_menus',
+    value: JSON.stringify([
       { id: '1', label: '首页', url: '/', children: [] },
       { id: '2', label: '归档', url: '/archive', children: [] },
-      { id: '3', label: '友情链接', url: '/links', children: [] }
-    ])
+      { id: '3', label: '友情链接', url: '/links', children: [] },
+    ]),
   },
   { key: 'carousel_items', value: JSON.stringify([]) },
-  { key: 'friend_links', value: JSON.stringify([]) }
+  { key: 'friend_links', value: JSON.stringify([]) },
 ];
 
 async function normalizeMySqlTableNames() {
@@ -49,10 +58,10 @@ async function normalizeMySqlTableNames() {
     ['attachments', 'Attachments'],
     ['settings', 'Settings'],
     ['pages', 'Pages'],
-    ['articletags', 'ArticleTags']
+    ['articletags', 'ArticleTags'],
   ];
   const queryInterface = sequelize.getQueryInterface();
-  const allTables = (await queryInterface.showAllTables()).map(t => String(t));
+  const allTables = (await queryInterface.showAllTables()).map((t) => String(t));
   const [lctnRows] = await sequelize.query('SELECT @@lower_case_table_names AS lctn');
   const lowerCaseTableNames = Number(lctnRows[0] && lctnRows[0].lctn);
 
@@ -76,10 +85,12 @@ async function normalizeMySqlTableNames() {
     if (upperCount > 0) continue;
     const upperColumns = Object.keys(await queryInterface.describeTable(upper));
     const lowerColumns = Object.keys(await queryInterface.describeTable(lower));
-    const shared = upperColumns.filter(col => lowerColumns.includes(col));
+    const shared = upperColumns.filter((col) => lowerColumns.includes(col));
     if (shared.length === 0) continue;
-    const columnsSql = shared.map(col => `\`${col}\``).join(', ');
-    await sequelize.query(`INSERT IGNORE INTO \`${upper}\` (${columnsSql}) SELECT ${columnsSql} FROM \`${lower}\``);
+    const columnsSql = shared.map((col) => `\`${col}\``).join(', ');
+    await sequelize.query(
+      `INSERT IGNORE INTO \`${upper}\` (${columnsSql}) SELECT ${columnsSql} FROM \`${lower}\``
+    );
   }
 }
 
@@ -98,23 +109,23 @@ async function init() {
   }
   console.log('✅ 数据库表同步完成\n');
 
-  // 创建管理员账号（如果不存在）
+  const randomPassword = crypto.randomBytes(8).toString('hex');
   const [admin, created] = await User.findOrCreate({
     where: { username: 'admin' },
     defaults: {
       username: 'admin',
-      password: 'admin123456',
+      password: randomPassword,
       nickname: '博主',
       email: 'admin@blog.com',
-      role: 'admin'
-    }
+      role: 'admin',
+    },
   });
 
   if (created) {
     console.log('✅ 管理员账号创建成功');
     console.log('   用户名: admin');
-    console.log('   密  码: admin123456');
-    console.log('   ⚠️  请登录后立即修改密码！\n');
+    console.log(`   密  码: ${randomPassword}`);
+    console.log('   ⚠️  请保存并登录后立即修改密码！\n');
   } else {
     console.log('ℹ️  管理员账号已存在，跳过创建\n');
   }
@@ -141,7 +152,7 @@ async function init() {
     const categories = [
       { name: '技术分享', slug: 'tech', description: '编程技术相关文章', sort: 1 },
       { name: '生活随笔', slug: 'life', description: '生活点滴记录', sort: 2 },
-      { name: '读书笔记', slug: 'books', description: '阅读心得分享', sort: 3 }
+      { name: '读书笔记', slug: 'books', description: '阅读心得分享', sort: 3 },
     ];
     await Category.bulkCreate(categories);
     console.log('✅ 示例分类创建完成');
@@ -155,7 +166,7 @@ async function init() {
       { name: 'JavaScript', slug: 'javascript' },
       { name: 'Express', slug: 'express' },
       { name: 'Redis', slug: 'redis' },
-      { name: 'MySQL', slug: 'mysql' }
+      { name: 'MySQL', slug: 'mysql' },
     ];
     await Tag.bulkCreate(tags);
     console.log('✅ 示例标签创建完成');
@@ -196,7 +207,7 @@ async function init() {
 访问 [后台管理](/admin)，使用初始账号登录：
 
 - 用户名：\`admin\`
-- 密码：\`admin123456\`
+- 密码：\`[你初始化时看到的随机密码]\`
 
 > 请登录后立即修改密码！
 
@@ -214,7 +225,7 @@ app.listen(3000);
       UserId: admin.id,
       status: 'published',
       pinned: true,
-      views: 0
+      views: 0,
     });
 
     const tags = await Tag.findAll({ limit: 3 });
@@ -235,14 +246,17 @@ app.listen(3000);
     const publishedArticles = await Article.findAll({
       where: { status: 'published' },
       attributes: ['title', 'slug', 'summary', 'cover'],
-      order: [['pinned', 'DESC'], ['createdAt', 'DESC']],
-      limit: 5
+      order: [
+        ['pinned', 'DESC'],
+        ['createdAt', 'DESC'],
+      ],
+      limit: 5,
     });
-    const nextCarouselItems = publishedArticles.map(a => ({
+    const nextCarouselItems = publishedArticles.map((a) => ({
       title: a.title || '',
       subtitle: a.summary || '',
       url: `/article/${a.slug}`,
-      image: a.cover || ''
+      image: a.cover || '',
     }));
     if (nextCarouselItems.length > 0) {
       await Setting.upsert({ key: 'carousel_items', value: JSON.stringify(nextCarouselItems) });
@@ -258,7 +272,7 @@ app.listen(3000);
   process.exit(0);
 }
 
-init().catch(err => {
+init().catch((err) => {
   console.error('❌ 初始化失败:', err);
   process.exit(1);
 });

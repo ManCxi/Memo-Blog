@@ -1,0 +1,174 @@
+/* ============================================================
+   ADMIN DESIGN TOKENS
+   Matches frontend main.css style
+============================================================ */
+:root {
+  --accent: #ff6b35;
+  --accent-light: #ff8c5a;
+  --accent-dark: #e55a24;
+  --accent-tint: rgba(255, 107, 53, 0.12);
+
+  --admin-blue: #0a7aff;
+  --admin-blue-tint: rgba(10, 122, 255, 0.1);
+  --admin-green: #34c759;
+  --admin-green-tint: rgba(52, 199, 89, 0.12);
+  --admin-yellow: #ff9f0a;
+  --admin-yellow-tint: rgba(255, 159, 10, 0.12);
+  --admin-red: #ff3b30;
+  --admin-red-tint: rgba(255, 59, 48, 0.1);
+  --admin-purple: #5856d6;
+  --admin-purple-tint: rgba(88, 86, 214, 0.1);
+
+  --surface-1-bg: #ffffff;
+  --surface-2-bg: rgba(255, 255, 255, 0.92);
+  --surface-3-bg: rgba(236, 236, 241, 0.9);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+
+  --surface-border: rgba(60, 60, 67, 0.2);
+  --surface-border-2: rgba(60, 60, 67, 0.12);
+  --separator: rgba(60, 60, 67, 0.12);
+
+  --surface-shadow-1:
+    0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.1);
+  --surface-shadow-2:
+    0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.07), 0 6px 18px rgba(0, 0, 0, 0.08);
+
+  --text-primary: #1c1c1e;
+  --text-secondary: rgba(60, 60, 67, 0.6);
+  --text-tertiary: rgba(60, 60, 67, 0.4);
+
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 64px;
+  --tab-bar-height: 56px;
+
+  --border-radius: 16px;
+  --border-radius-lg: 22px;
+  --border-radius-xl: 28px;
+  --border-radius-pill: 999px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+}
+
+/* ============================================================
+   RESET & BASE
+============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #ebebf0;
+  color: var(--text-primary);
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Text',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  height: 100vh;
+  overflow: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+img {
+  max-width: 100%;
+}
+button {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 99px;
+}
+
+/* ============================================================
+   ANIMATIONS
+============================================================ */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+.d-flex {
+  display: flex;
+}
+.flex-column {
+  flex-direction: column;
+}
+.flex-1 {
+  flex: 1;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+.gap-8 {
+  gap: 8px;
+}
+.mt-16 {
+  margin-top: 16px;
+}
+.justify-center {
+  justify-content: center;
+}
+.text-tertiary {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}

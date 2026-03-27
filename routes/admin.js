@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const csrf = require('csurf');
+const csrfProtection = csrf({ cookie: false });
 const { requireLogin } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const multer = require('multer');
@@ -33,15 +35,30 @@ const anyUpload = multer({
     filename(req, file, cb) {
       const ext = path.extname(file.originalname);
       cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-    }
+    },
   }),
-  limits: { fileSize: 20 * 1024 * 1024 } // 20MB
+  fileFilter(req, file, cb) {
+    const forbidden = /\.(html|htm|svg|js|sh|php|asp|aspx|exe|msi)$/i;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mime = file.mimetype.toLowerCase();
+
+    if (
+      forbidden.test(ext) ||
+      forbidden.test(mime) ||
+      mime.includes('html') ||
+      mime.includes('javascript')
+    ) {
+      return cb(new Error('不允许上传高风险文件类型（HTML, SVG, JS 等）'), false);
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 });
 
 // ── 登录 / 退出 ──────────────────────────────
 router.get('/login', adminController.loginPage);
 router.post('/login', adminController.login);
-router.get('/logout', adminController.logout);
+router.post('/logout', requireLogin, adminController.logout);
 
 // ── 以下路由都需要登录 ─────────────────────────
 router.use(requireLogin);
@@ -67,14 +84,14 @@ router.get('/settings/links', settingController.linksPage);
 
 // ── 附件库 ───────────────────────────────────
 router.get('/media', attachmentController.index);
-router.post('/media/upload', anyUpload.single('file'), attachmentController.upload);
+router.post('/media/upload', anyUpload.single('file'), csrfProtection, attachmentController.upload);
 router.delete('/media/:id', attachmentController.destroy);
 router.post('/media/batch-delete', attachmentController.batchDestroy);
 router.post('/media/delete-by-url', attachmentController.deleteByUrl);
 router.post('/media/sync', attachmentController.sync);
 
 // ── 图片上传接口（富文本编辑器使用）
-router.post('/upload/image', upload.single('image'), articleController.uploadImage);
+router.post('/upload/image', upload.single('image'), csrfProtection, articleController.uploadImage);
 
 // ── 附件 JSON 列表与详情 ─────────────────────
 router.get('/media/list', attachmentController.list);
@@ -83,9 +100,9 @@ router.get('/media/detail/:id', attachmentController.detail);
 // ── 文章 ────────────────────────────────────
 router.get('/articles', articleController.index);
 router.get('/articles/create', articleController.createPage);
-router.post('/articles', upload.single('coverFile'), articleController.create);
+router.post('/articles', upload.single('coverFile'), csrfProtection, articleController.create);
 router.get('/articles/:id/edit', articleController.editPage);
-router.put('/articles/:id', upload.single('coverFile'), articleController.update);
+router.put('/articles/:id', upload.single('coverFile'), csrfProtection, articleController.update);
 router.delete('/articles/:id', articleController.destroy);
 
 // ── 独立页面 ──────────────────────────────────

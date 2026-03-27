@@ -10,7 +10,7 @@ function flattenCategoryTree(categoryRows) {
     byParent[p].push(c);
   }
   for (const arr of Object.values(byParent)) {
-    arr.sort((a, b) => (a.sort - b.sort) || (a.id - b.id));
+    arr.sort((a, b) => a.sort - b.sort || a.id - b.id);
   }
   const out = [];
   const walk = (pid, depth) => {
@@ -26,15 +26,24 @@ function flattenCategoryTree(categoryRows) {
 exports.index = async (req, res) => {
   try {
     const [categories, tags] = await Promise.all([
-      Category.findAll({ order: [['sort', 'ASC'], ['id', 'ASC']], include: [{ association: 'articles', attributes: ['id'] }] }),
-      Tag.findAll({ order: [['name', 'ASC']], include: [{ association: 'articles', attributes: ['id'], through: { attributes: [] } }] })
+      Category.findAll({
+        order: [
+          ['sort', 'ASC'],
+          ['id', 'ASC'],
+        ],
+        include: [{ association: 'articles', attributes: ['id'] }],
+      }),
+      Tag.findAll({
+        order: [['name', 'ASC']],
+        include: [{ association: 'articles', attributes: ['id'], through: { attributes: [] } }],
+      }),
     ]);
 
     res.render('admin/taxonomy/index', {
       title: '分类/标签管理',
       categories,
       categoriesFlat: flattenCategoryTree(categories),
-      tags
+      tags,
     });
   } catch (err) {
     console.error(err);

@@ -1,5 +1,6 @@
 const { getSettings, updateSettings, invalidateCache } = require('../utils/settings');
 const { Category, Article, Page } = require('../models');
+const { sanitize } = require('../utils/sanitizer');
 
 // 系统设置页
 exports.settingsPage = async (req, res) => {
@@ -15,8 +16,14 @@ exports.settingsPage = async (req, res) => {
 exports.navPage = async (req, res) => {
   try {
     const settings = await getSettings();
-    const categories = await Category.findAll({ attributes: ['id', 'name', 'slug'], order: [['sort', 'ASC']] });
-    const pages = await Page.findAll({ where: { status: 'published' }, attributes: ['id', 'title', 'slug'] });
+    const categories = await Category.findAll({
+      attributes: ['id', 'name', 'slug'],
+      order: [['sort', 'ASC']],
+    });
+    const pages = await Page.findAll({
+      where: { status: 'published' },
+      attributes: ['id', 'title', 'slug'],
+    });
     res.render('admin/settings/nav', { title: '导航菜单', settings, categories, pages });
   } catch (err) {
     console.error(err);
@@ -31,7 +38,7 @@ exports.carouselPage = async (req, res) => {
       where: { status: 'published' },
       attributes: ['id', 'title', 'slug', 'cover', 'summary'],
       order: [['createdAt', 'DESC']],
-      limit: 100
+      limit: 100,
     });
     res.render('admin/settings/carousel', { title: '轮播图', settings, articles });
   } catch (err) {
@@ -59,9 +66,17 @@ exports.updateSettings = async (req, res) => {
     for (const [key, value] of Object.entries(data)) {
       if (key.startsWith('_')) continue; // 跳过 _method 等辅助字段
       try {
-        parsed[key] = JSON.parse(value);
+        let val = value;
+        if (key === 'head_code' || key === 'copyright' || key === 'site_description') {
+          val = sanitize(value);
+        }
+        parsed[key] = JSON.parse(val);
       } catch {
-        parsed[key] = value;
+        let val = value;
+        if (key === 'head_code' || key === 'copyright' || key === 'site_description') {
+          val = sanitize(value);
+        }
+        parsed[key] = val;
       }
     }
     await updateSettings(parsed);
@@ -76,7 +91,16 @@ exports.updateSettings = async (req, res) => {
 // JSON API：保存设置（前台 fetch 调用）
 exports.updateSettingsApi = async (req, res) => {
   try {
-    await updateSettings(req.body);
+    const data = req.body;
+    const sanitized = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (key === 'head_code' || key === 'copyright' || key === 'site_description') {
+        sanitized[key] = sanitize(value);
+      } else {
+        sanitized[key] = value;
+      }
+    }
+    await updateSettings(sanitized);
     invalidateCache();
     res.json({ ok: true });
   } catch (err) {

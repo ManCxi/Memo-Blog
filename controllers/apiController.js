@@ -4,6 +4,8 @@ const { getSettings } = require('../utils/settings');
 const slugify = require('slugify');
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middleware/apiAuth');
 
 exports.getArticles = async (req, res) => {
   try {
@@ -21,7 +23,7 @@ exports.getArticles = async (req, res) => {
     if (search) {
       where[Op.or] = [
         { title: { [Op.like]: `%${search}%` } },
-        { content: { [Op.like]: `%${search}%` } }
+        { content: { [Op.like]: `%${search}%` } },
       ];
     }
 
@@ -30,11 +32,8 @@ exports.getArticles = async (req, res) => {
       limit,
       offset: (page - 1) * limit,
       order: [['publishedAt', 'DESC']],
-      include: [
-        { association: 'category' },
-        { association: 'tags', through: { attributes: [] } }
-      ],
-      distinct: true
+      include: [{ association: 'category' }, { association: 'tags', through: { attributes: [] } }],
+      distinct: true,
     });
 
     // 填充实时阅读量
@@ -45,7 +44,7 @@ exports.getArticles = async (req, res) => {
       total: count,
       page,
       limit,
-      totalPages: Math.ceil(count / limit)
+      totalPages: Math.ceil(count / limit),
     });
   } catch (err) {
     console.error(err);
@@ -56,13 +55,10 @@ exports.getArticles = async (req, res) => {
 exports.getArticleById = async (req, res) => {
   try {
     const article = await Article.findByPk(req.params.id, {
-      include: [
-        { association: 'category' },
-        { association: 'tags', through: { attributes: [] } }
-      ]
+      include: [{ association: 'category' }, { association: 'tags', through: { attributes: [] } }],
     });
     if (!article) return res.status(404).json({ error: 'Not found' });
-    
+
     // 填充实时阅读量
     await cache.fillViews(article);
 
@@ -80,18 +76,22 @@ exports.createArticle = async (req, res) => {
     if (existing) slug = `${slug}-${Date.now()}`;
 
     const article = await Article.create({
-      title, slug, content, summary, cover,
+      title,
+      slug,
+      content,
+      summary,
+      cover,
       status: (status || 'published').toLowerCase(),
       CategoryId: categoryId || null,
-      UserId: 1 // 假设 admin
+      UserId: req.user.id || 1,
     });
 
     if (tags && tags.length > 0) {
       // 简单处理，如果是数字字符串则直接关联
-      const tagIds = tags.map(Number).filter(n => !isNaN(n));
+      const tagIds = tags.map(Number).filter((n) => !isNaN(n));
       await article.setTags(tagIds);
     }
-    
+
     await cache.delPattern('home:articles:*');
     await cache.del('sidebar:data');
 
@@ -108,13 +108,16 @@ exports.updateArticle = async (req, res) => {
 
     const { title, content, summary, cover, status, categoryId, tags } = req.body;
     await article.update({
-      title, content, summary, cover,
+      title,
+      content,
+      summary,
+      cover,
       status: (status || 'published').toLowerCase(),
-      CategoryId: categoryId || null
+      CategoryId: categoryId || null,
     });
 
     if (tags !== undefined) {
-      const tagIds = tags.map(Number).filter(n => !isNaN(n));
+      const tagIds = tags.map(Number).filter((n) => !isNaN(n));
       await article.setTags(tagIds);
     }
 
@@ -192,7 +195,7 @@ exports.updateSettings = async (req, res) => {
     let stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
     const [setting, created] = await Setting.findOrCreate({
       where: { key },
-      defaults: { value: stringValue }
+      defaults: { value: stringValue },
     });
     if (!created) {
       setting.value = stringValue;
@@ -210,11 +213,13 @@ exports.login = async (req, res) => {
   if (!user) return res.status(401).json({ error: 'User not found' });
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(401).json({ error: 'Wrong password' });
-  res.json({ token: 'mock-token-for-api' });
+
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+  res.json({ token, user: { id: user.id, username: user.username, nickname: user.nickname } });
 };
 
 exports.getProfile = async (req, res) => {
-  const user = await User.findByPk(1, { attributes: { exclude: ['password'] }});
+  const user = await User.findByPk(req.user.id, { attributes: { exclude: ['password'] } });
   res.json(user);
 };
 
@@ -226,17 +231,17 @@ exports.getStats = async (req, res) => {
   const articleCount = await Article.count();
   const categoryCount = await Category.count();
   const tagCount = await Tag.count();
-  
+
   // 总 PV (数据库 + Redis 缓冲)
-  let totalPv = await Article.sum('views') || 0;
+  let totalPv = (await Article.sum('views')) || 0;
   const { client: redis, enabled: redisEnabled } = require('../config/redis');
   if (redisEnabled && redis) {
-     const keys = await redis.keys('article:view:*');
-     if (keys.length > 0) {
-       const counts = await redis.mget(...keys);
-       const redisTotal = counts.reduce((sum, c) => sum + (parseInt(c) || 0), 0);
-       totalPv += redisTotal;
-     }
+    const keys = await redis.keys('article:view:*');
+    if (keys.length > 0) {
+      const counts = await redis.mget(...keys);
+      const redisTotal = counts.reduce((sum, c) => sum + (parseInt(c) || 0), 0);
+      totalPv += redisTotal;
+    }
   }
 
   res.json({ articleCount, categoryCount, tagCount, totalPv });

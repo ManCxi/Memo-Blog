@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %> - <%= siteTitle %></title>
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
   <%- include('../../partials/favicon') %>
   <script>
     (function() {
@@ -13,25 +14,11 @@
   </script>
   <link rel="stylesheet" href="/fonts/inter/inter.css">
   <link href="/libs/wangeditor/style.css" rel="stylesheet">
-  <link rel="stylesheet" href="/css/admin.css">
-  <style>
-    /* 悬浮提示样式 */
-    .floating-toast {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 9999;
-      min-width: 300px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      animation: toast-slide-down 0.3s ease forwards;
-    }
-    @keyframes toast-slide-down {
-      from { transform: translate(-50%, -20px); opacity: 0; }
-      to { transform: translate(-50%, 0); opacity: 1; }
-    }
-  </style>
+  <!-- Modular Admin CSS -->
+  <link rel="stylesheet" href="/css/admin/base.css">
+  <link rel="stylesheet" href="/css/admin/layout.css">
+  <link rel="stylesheet" href="/css/admin/components.css">
+  <link rel="stylesheet" href="/css/admin/pages.css">
 </head>
 <body>
 
@@ -137,7 +124,10 @@
       <div class="admin-header-right">
         <button class="admin-header-btn theme-toggle-btn" onclick="toggleTheme()" title="切换主题">🌙</button>
         <a href="/admin/articles/create" class="admin-header-btn" title="写新文章">✏️</a>
-        <a href="/admin/logout" class="admin-header-btn" title="退出登录" onclick="return confirm('确定要退出登录吗？')">🚪</a>
+        <form method="POST" action="/admin/logout" style="display:inline-flex;" onsubmit="return confirm('确定要退出登录吗？')">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="admin-header-btn" title="退出登录">🚪</button>
+        </form>
       </div>
     </header>
 

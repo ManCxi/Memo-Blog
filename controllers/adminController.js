@@ -15,18 +15,25 @@ exports.login = async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
       return res.render('admin/login', {
-        title: '后台登录', layout: false, error: '请输入用户名和密码'
+        title: '后台登录',
+        layout: false,
+        error: '请输入用户名和密码',
       });
     }
     const user = await User.findOne({ where: { username } });
     if (!user || !(await user.validatePassword(password))) {
       return res.render('admin/login', {
-        title: '后台登录', layout: false, error: '用户名或密码错误'
+        title: '后台登录',
+        layout: false,
+        error: '用户名或密码错误',
       });
     }
     req.session.user = {
-      id: user.id, username: user.username,
-      nickname: user.nickname, role: user.role, avatar: user.avatar
+      id: user.id,
+      username: user.username,
+      nickname: user.nickname,
+      role: user.role,
+      avatar: user.avatar,
     };
     const redirectTo = req.session.redirectTo || '/admin';
     delete req.session.redirectTo;
@@ -34,7 +41,9 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.render('admin/login', {
-      title: '后台登录', layout: false, error: '服务器错误，请稍后重试'
+      title: '后台登录',
+      layout: false,
+      error: '服务器错误，请稍后重试',
     });
   }
 };
@@ -55,33 +64,41 @@ exports.dashboard = async (req, res) => {
         Article.count({ where: { status: 'draft' } }),
         Category.count(),
         Tag.count(),
-        Page.count()
+        Page.count(),
       ]);
 
     // 总 PV (数据库 + Redis 缓冲)
-    let totalPv = await Article.sum('views') || 0;
+    let totalPv = (await Article.sum('views')) || 0;
     const { client: redis, enabled: redisEnabled } = require('../config/redis');
     if (redisEnabled && redis) {
-       const keys = await redis.keys('article:view:*');
-       if (keys.length > 0) {
-         const counts = await redis.mget(...keys);
-         const redisTotal = counts.reduce((sum, c) => sum + (parseInt(c) || 0), 0);
-         totalPv += redisTotal;
-       }
+      const keys = await cache.scanKeys('article:view:*');
+      if (keys.length > 0) {
+        const counts = await redis.mget(...keys);
+        const redisTotal = counts.reduce((sum, c) => sum + (parseInt(c) || 0), 0);
+        totalPv += redisTotal;
+      }
     }
 
     const recentArticles = await Article.findAll({
       order: [['createdAt', 'DESC']],
       limit: 5,
-      include: [{ association: 'category', attributes: ['name'] }]
+      include: [{ association: 'category', attributes: ['name'] }],
     });
     // 填充实时阅读量
     await cache.fillViews(recentArticles);
 
     res.render('admin/dashboard', {
       title: '仪表盘',
-      stats: { articleCount, publishedCount, draftCount, categoryCount, tagCount, pageCount, totalPv },
-      recentArticles
+      stats: {
+        articleCount,
+        publishedCount,
+        draftCount,
+        categoryCount,
+        tagCount,
+        pageCount,
+        totalPv,
+      },
+      recentArticles,
     });
   } catch (err) {
     console.error(err);
@@ -116,7 +133,13 @@ exports.updateProfile = async (req, res) => {
     const settings = await getSettings();
     const bloggerInfo = {
       ...(settings.blogger_info || {}),
-      nickname, email, avatar, bio, github, qq, website
+      nickname,
+      email,
+      avatar,
+      bio,
+      github,
+      qq,
+      website,
     };
     await updateSettings({ blogger_info: bloggerInfo });
     invalidateCache();
@@ -164,17 +187,17 @@ exports.stats = async (req, res) => {
       Article.count({ where: { status: 'published' } }),
       Category.count(),
       Tag.count(),
-      Page.count()
+      Page.count(),
     ]);
-    let totalPv = await Article.sum('views') || 0;
+    let totalPv = (await Article.sum('views')) || 0;
     const { client: redis, enabled: redisEnabled } = require('../config/redis');
     if (redisEnabled && redis) {
-       const keys = await redis.keys('article:view:*');
-       if (keys.length > 0) {
-         const counts = await redis.mget(...keys);
-         const redisTotal = counts.reduce((sum, c) => sum + (parseInt(c) || 0), 0);
-         totalPv += redisTotal;
-       }
+      const keys = await cache.scanKeys('article:view:*');
+      if (keys.length > 0) {
+        const counts = await redis.mget(...keys);
+        const redisTotal = counts.reduce((sum, c) => sum + (parseInt(c) || 0), 0);
+        totalPv += redisTotal;
+      }
     }
     res.json({ articleCount, categoryCount, tagCount, pageCount, totalPv });
   } catch (err) {

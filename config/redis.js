@@ -16,7 +16,7 @@ if (!enabled) {
       const delay = Math.min(times * 50, 2000);
       return delay;
     },
-    maxRetriesPerRequest: 3
+    maxRetriesPerRequest: 3,
   });
 
   client.on('connect', () => console.log('✅ Redis 连接成功'));

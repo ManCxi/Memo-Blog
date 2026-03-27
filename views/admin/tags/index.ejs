@@ -12,6 +12,7 @@
     <div class="cat-form-header">🏷️ 新建标签</div>
     <div class="cat-form-body">
       <form method="POST" action="/admin/tags">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="form-group">
           <label class="form-label">标签名称 <span style="color:var(--admin-red);">*</span></label>
           <input type="text" name="name" class="form-control form-control-sm"
@@ -42,6 +43,7 @@
           onclick="openEditTagModal(<%= tag.id %>, '<%= tag.name.replace(/'/g, "\\'") %>')">✏️</button>
         <form action="/admin/tags/<%= tag.id %>?_method=DELETE" method="POST" style="display:inline;"
           onsubmit="return confirm('确定删除标签「<%= tag.name %>」吗？')">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit" class="tag-pill-btn del" title="删除">✕</button>
         </form>
       </div>
@@ -59,6 +61,7 @@
       <button class="modal-close" onclick="closeModal('editTagModal')">×</button>
     </div>
     <form id="editTagForm" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">标签名称</label>

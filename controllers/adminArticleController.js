@@ -4,85 +4,12 @@ const slugify = require('slugify');
 const { getRelativeUploadPath } = require('../config/uploadsPath');
 const path = require('path');
 const fs = require('fs');
-const sharp = require('sharp');
+const { compressImageIfPossible } = require('../services/mediaService');
+const { sanitize } = require('../utils/sanitizer');
 
 const PAGE_SIZE = 15;
 
-async function compressImageIfPossible(filePath, mimetype) {
-  const fallback = { filePath, size: fs.statSync(filePath).size, mimetype: mimetype || 'application/octet-stream' };
-  if (!mimetype || !mimetype.startsWith('image/')) return fallback;
-  try {
-    const metadata = await sharp(filePath, { animated: true, failOn: 'none' }).metadata();
-    if (!metadata || !metadata.format) return fallback;
-    if (metadata.pages && metadata.pages > 1) return fallback;
-    const format = String(metadata.format).toLowerCase();
-    if (!['jpeg', 'jpg', 'png', 'webp'].includes(format)) return fallback;
-
-    const originalSize = fallback.size;
-    const sourceExt = path.extname(filePath).toLowerCase();
-    const sourceName = path.basename(filePath, sourceExt);
-    const sourceDir = path.dirname(filePath);
-    const candidates = [];
-    const width = Number(metadata.width) || 0;
-    const height = Number(metadata.height) || 0;
-
-    const buildBase = () => {
-      let pipeline = sharp(filePath, { failOn: 'none' }).rotate();
-      if (width > 2560 || height > 2560) {
-        pipeline = pipeline.resize({ width: 2560, height: 2560, fit: 'inside', withoutEnlargement: true });
-      }
-      return pipeline;
-    };
-
-    const addCandidate = async (pipeline, ext, outputMime) => {
-      const tmpName = `${sourceName}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const tmpPath = path.join(sourceDir, tmpName);
-      await pipeline.toFile(tmpPath);
-      const stat = fs.statSync(tmpPath);
-      candidates.push({ path: tmpPath, size: stat.size, mimetype: outputMime, ext });
-    };
-
-    if (format === 'jpeg' || format === 'jpg') {
-      await addCandidate(buildBase().jpeg({ quality: 78, mozjpeg: true, progressive: true, chromaSubsampling: '4:2:0' }), 'jpg', 'image/jpeg');
-    }
-    if (format === 'png') {
-      await addCandidate(buildBase().png({ quality: 78, compressionLevel: 9, palette: true, effort: 10 }), 'png', 'image/png');
-    }
-    if (format === 'webp') {
-      await addCandidate(buildBase().webp({ quality: 78, alphaQuality: 80, effort: 6 }), 'webp', 'image/webp');
-    }
-    await addCandidate(buildBase().webp({ quality: metadata.hasAlpha ? 80 : 76, alphaQuality: 80, effort: 6 }), 'webp', 'image/webp');
-
-    if (!candidates.length) return fallback;
-    let best = candidates[0];
-    for (const item of candidates) {
-      if (item.size < best.size) best = item;
-    }
-    const minSavingRatio = 0.05;
-    if (best.size >= originalSize * (1 - minSavingRatio)) {
-      for (const item of candidates) {
-        if (fs.existsSync(item.path)) fs.unlinkSync(item.path);
-      }
-      return fallback;
-    }
-
-    const bestExt = `.${best.ext}`;
-    const targetPath = sourceExt === bestExt ? filePath : path.join(sourceDir, `${sourceName}${bestExt}`);
-    for (const item of candidates) {
-      if (item.path !== best.path && fs.existsSync(item.path)) fs.unlinkSync(item.path);
-    }
-    if (best.path !== targetPath) {
-      if (fs.existsSync(targetPath)) fs.unlinkSync(targetPath);
-      fs.renameSync(best.path, targetPath);
-    } else if (best.path !== filePath) {
-      fs.renameSync(best.path, filePath);
-    }
-    if (targetPath !== filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    return { filePath: targetPath, size: fs.statSync(targetPath).size, mimetype: best.mimetype };
-  } catch (err) {
-    return fallback;
-  }
-}
+// compressImageIfPossible moved to services/mediaService.js
 
 // 文章列表
 exports.index = async (req, res) => {
@@ -103,7 +30,7 @@ exports.index = async (req, res) => {
       include: [{ association: 'category', attributes: ['id', 'name'] }],
       order: [['publishedAt', 'DESC']],
       limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE
+      offset: (page - 1) * PAGE_SIZE,
     });
 
     // 填充实时阅读量
@@ -120,7 +47,7 @@ exports.index = async (req, res) => {
       totalPages: Math.ceil(result.count / PAGE_SIZE),
       keyword,
       status,
-      categoryId
+      categoryId,
     });
   } catch (err) {
     console.error(err);
@@ -138,14 +65,15 @@ exports.createPage = async (req, res) => {
     article: null,
     categories,
     tags,
-    selectedTags: []
+    selectedTags: [],
   });
 };
 
 // 新建文章保存
 exports.create = async (req, res) => {
   try {
-    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt } = req.body;
+    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt } =
+      req.body;
     let uploadedCover = '';
     if (req.file) {
       const compressedCover = await compressImageIfPossible(req.file.path, req.file.mimetype);
@@ -169,17 +97,18 @@ exports.create = async (req, res) => {
       finalStatus = status;
     }
 
+    const sanitizedContent = sanitize(content);
     const article = await Article.create({
       title,
       slug,
-      content,
-      summary: summary || content.slice(0, 200),
+      content: sanitizedContent,
+      summary: sanitize(summary) || sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, ''),
       cover: cover || uploadedCover,
       CategoryId: CategoryId || null,
       UserId: req.session.user.id,
       status: finalStatus,
       pinned: pinned === 'on' || pinned === '1',
-      publishedAt: publishedAt ? new Date(publishedAt) : new Date()
+      publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
     });
 
     // 关联标签
@@ -204,7 +133,7 @@ exports.create = async (req, res) => {
       categories,
       tags,
       selectedTags: [],
-      error: '保存失败：' + err.message
+      error: '保存失败：' + err.message,
     });
   }
 };
@@ -213,20 +142,20 @@ exports.create = async (req, res) => {
 exports.editPage = async (req, res) => {
   try {
     const article = await Article.findByPk(req.params.id, {
-      include: [{ association: 'tags', through: { attributes: [] } }]
+      include: [{ association: 'tags', through: { attributes: [] } }],
     });
     if (!article) return res.status(404).render('404', { title: '文章不存在' });
 
     const categories = await Category.findAll({ order: [['sort', 'ASC']] });
     const tags = await Tag.findAll();
-    const selectedTags = article.tags.map(t => t.id);
+    const selectedTags = article.tags.map((t) => t.id);
 
     res.render('admin/articles/form', {
       title: '编辑文章',
       article,
       categories,
       tags,
-      selectedTags
+      selectedTags,
     });
   } catch (err) {
     console.error(err);
@@ -240,7 +169,8 @@ exports.update = async (req, res) => {
     const article = await Article.findByPk(req.params.id);
     if (!article) return res.status(404).send('文章不存在');
 
-    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt } = req.body;
+    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt } =
+      req.body;
     let uploadedCover = '';
     if (req.file) {
       const compressedCover = await compressImageIfPossible(req.file.path, req.file.mimetype);
@@ -255,14 +185,15 @@ exports.update = async (req, res) => {
       finalStatus = status;
     }
 
+    const sanitizedContent = sanitize(content);
     const updateData = {
       title,
-      content,
-      summary: summary || content.slice(0, 200),
+      content: sanitizedContent,
+      summary: sanitize(summary) || sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, ''),
       cover: cover || uploadedCover || article.cover,
       CategoryId: CategoryId || null,
       status: finalStatus,
-      pinned: pinned === 'on' || pinned === '1'
+      pinned: pinned === 'on' || pinned === '1',
     };
 
     if (publishedAt) {
@@ -327,7 +258,7 @@ exports.uploadImage = async (req, res) => {
       filename: displayName,
       path: urlPath,
       mimetype: compressed.mimetype || 'image/jpeg',
-      size: compressed.size || size || 0
+      size: compressed.size || size || 0,
     });
 
     res.json({ success: true, url: urlPath, id: att.id, filename: displayName });

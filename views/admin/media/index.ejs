@@ -258,7 +258,11 @@ async function uploadFiles(files) {
     fd.append('file', uploadFile);
     text.textContent = `(${done+1}/${files.length}) ${file.name}`;
     try {
-      const r = await fetch('/admin/media/upload', { method: 'POST', body: fd });
+      const r = await fetch('/admin/media/upload', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': '<%= csrfToken %>' },
+        body: fd
+      });
       const contentType = r.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         failed.push(`${file.name}: 服务返回异常响应`);
@@ -275,8 +279,8 @@ async function uploadFiles(files) {
   progress.style.display = 'none';
   text.textContent = '';
   if (success > 0) {
-    showToast(`上传完成：成功 ${success} 个，失败 ${failed.length} 个`);
-    setTimeout(() => location.reload(), 600);
+    persistToast(`上传完成：成功 ${success} 个，失败 ${failed.length} 个`);
+    location.reload();
     return;
   }
   alert('上传失败：\n' + failed.join('\n'));
@@ -285,7 +289,10 @@ async function uploadFiles(files) {
 // 删除单个
 async function deleteFile(id) {
   if (!confirm('确认删除该文件？')) return;
-  const r = await fetch('/admin/media/' + id, { method: 'DELETE' });
+  const r = await fetch('/admin/media/' + id, {
+    method: 'DELETE',
+    headers: { 'X-CSRF-Token': '<%= csrfToken %>' }
+  });
   const d = await r.json();
   if (d.ok) location.reload();
   else alert('删除失败：' + d.message);
@@ -351,7 +358,10 @@ async function batchDelete() {
   if (!confirm(`确认删除选中的 ${ids.length} 个文件？`)) return;
   const r = await fetch('/admin/media/batch-delete', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': '<%= csrfToken %>'
+    },
     body: JSON.stringify({ ids })
   });
   const d = await r.json();
@@ -363,12 +373,20 @@ async function batchDelete() {
 async function syncFiles() {
   const btn = event.target;
   btn.disabled = true; btn.textContent = '同步中...';
-  const r = await fetch('/admin/media/sync', { method: 'POST' });
+  const r = await fetch('/admin/media/sync', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': '<%= csrfToken %>' }
+  });
   const d = await r.json();
   btn.disabled = false; btn.textContent = '🔄 同步本地';
   if (d.ok) {
-    showToast(`同步完成，新增 ${d.synced} 个文件`);
-    if (d.synced > 0) setTimeout(() => location.reload(), 1500);
+    const msg = `同步完成，新增 ${d.synced} 个文件`;
+    if (d.synced > 0) {
+      persistToast(msg);
+      location.reload();
+    } else {
+      showToast(msg);
+    }
   } else {
     showToast('同步失败', 'error');
   }
@@ -389,8 +407,35 @@ function showToast(msg, type = 'success') {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3000);
 }
+const MEDIA_TOAST_KEY = 'admin.media.toast';
+function persistToast(msg, type = 'success') {
+  sessionStorage.setItem(
+    MEDIA_TOAST_KEY,
+    JSON.stringify({
+      msg,
+      type,
+      expireAt: Date.now() + 10000,
+    })
+  );
+}
+function consumePersistedToast() {
+  const raw = sessionStorage.getItem(MEDIA_TOAST_KEY);
+  if (!raw) return;
+  sessionStorage.removeItem(MEDIA_TOAST_KEY);
+  try {
+    const data = JSON.parse(raw);
+    if (!data || !data.msg) return;
+    if (data.expireAt && Date.now() > data.expireAt) return;
+    showToast(data.msg, data.type || 'success');
+  } catch (e) {
+    return;
+  }
+}
 window.addEventListener('resize', updateBatchBtn);
-document.addEventListener('DOMContentLoaded', updateBatchBtn);
+document.addEventListener('DOMContentLoaded', () => {
+  updateBatchBtn();
+  consumePersistedToast();
+});
 </script>
 
 <style>

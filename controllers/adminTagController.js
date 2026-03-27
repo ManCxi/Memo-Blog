@@ -7,7 +7,7 @@ exports.index = async (req, res) => {
   try {
     const tags = await Tag.findAll({
       order: [['name', 'ASC']],
-      include: [{ association: 'articles', attributes: ['id'], through: { attributes: [] } }]
+      include: [{ association: 'articles', attributes: ['id'], through: { attributes: [] } }],
     });
     res.render('admin/taxonomy/index', { title: '标签管理', tags });
   } catch (err) {

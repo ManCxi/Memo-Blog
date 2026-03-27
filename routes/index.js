@@ -44,8 +44,8 @@ router.get('/article/demo', (req, res) => {
     tags: [
       { name: 'Design System', slug: 'design-system' },
       { name: 'CSS', slug: 'css' },
-      { name: 'Accessibility', slug: 'a11y' }
-    ]
+      { name: 'Accessibility', slug: 'a11y' },
+    ],
   };
   const contentHtml = `
     <p>本文演示文章详情页的视觉与交互，包括目录生成、代码高亮、KaTeX 数学公式与 Mermaid 图表。</p>
@@ -77,7 +77,14 @@ router.get('/article/demo', (req, res) => {
   const totalViews = 1024;
   const prevArticle = { title: '从零构建排版体系', slug: 'typography-system' };
   const nextArticle = { title: '响应式网格与布局', slug: 'responsive-grid' };
-  res.render('article', { title: article.title, article, contentHtml, totalViews, prevArticle, nextArticle });
+  res.render('article', {
+    title: article.title,
+    article,
+    contentHtml,
+    totalViews,
+    prevArticle,
+    nextArticle,
+  });
 });
 
 // ── 文章详情 ───────────────────────────────────

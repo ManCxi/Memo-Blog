@@ -83,6 +83,7 @@
     <div class="cat-form-header">🗂️ 新建分类</div>
     <div class="cat-form-body">
       <form method="POST" action="/admin/categories">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="form-group">
           <label class="form-label">分类名称 <span style="color:var(--admin-red);">*</span></label>
           <input type="text" name="name" class="form-control form-control-sm" placeholder="输入分类名称" required>
@@ -140,6 +141,7 @@
       <button type="button" class="modal-close" onclick="closeModal('editCatModal')">×</button>
     </div>
     <form id="editCatForm" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">分类名称</label>
@@ -218,6 +220,7 @@ function renderItem(c, byParent) {
       <div style="display:flex;gap:6px;flex-shrink:0;">
         <button type="button" class="btn btn-edit btn-sm">编辑</button>
         <form action="/admin/categories/${c.id}?_method=DELETE" method="POST" onsubmit="return confirm('删除分类不会删除其下的文章，确定继续？')">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
         </form>
       </div>
@@ -423,7 +426,10 @@ function saveOrder() {
   collectFromUl(catRoot, null, items);
   fetch('/admin/categories/reorder', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': '<%= csrfToken %>'
+    },
     body: JSON.stringify({ items })
   })
     .then(r => r.json())

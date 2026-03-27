@@ -313,6 +313,50 @@ async function doAttachmentUpload(files) {
   }
   text.textContent = '';
 }
+
+// ── CSRF Auto-injection ──
+(function() {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content;
+  if (!token) return;
+
+  // For native forms
+  const injectToken = (form) => {
+    if (form.method.toUpperCase() === 'POST' && !form.querySelector('input[name="_csrf"]')) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = '_csrf';
+      input.value = token;
+      form.appendChild(input);
+    }
+  };
+
+  document.querySelectorAll('form').forEach(injectToken);
+  
+  // For dynamically added forms
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if (node.tagName === 'FORM') injectToken(node);
+        else if (node && node.querySelectorAll) node.querySelectorAll('form').forEach(injectToken);
+      });
+    });
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // For fetch calls
+  const originalFetch = window.fetch;
+  window.fetch = function(url, options = {}) {
+    if (options.method && options.method.toUpperCase() !== 'GET') {
+      options.headers = options.headers || {};
+      if (options.headers instanceof Headers) {
+        options.headers.set('X-CSRF-Token', token);
+      } else {
+        options.headers['X-CSRF-Token'] = token;
+      }
+    }
+    return originalFetch.call(this, url, options);
+  };
+})();
 </script>
 
 <!-- 通用「选择附件」弹窗 -->

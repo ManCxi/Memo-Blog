@@ -2,39 +2,11 @@ const { Article, Category, Tag } = require('../models');
 const { cache, CACHE_EXPIRES } = require('../utils/cache');
 const { getSettings } = require('../utils/settings');
 const { Op } = require('sequelize');
+const { getSidebarData } = require('../services/sidebarService');
 
 const PAGE_SIZE = 10;
 
-// 获取侧边栏数据（缓存）
-async function getSidebarData() {
-  const cacheKey = 'sidebar:data';
-  let data = await cache.get(cacheKey);
-  if (data) return data;
-
-  const [categories, tags, recentArticles, articleCount] = await Promise.all([
-    Category.findAll({
-      include: [{ association: 'articles', where: { status: 'published' }, required: false }],
-      order: [['sort', 'ASC']]
-    }),
-    Tag.findAll(),
-    Article.findAll({
-      where: { status: 'published' },
-      order: [['views', 'DESC']],
-      limit: 10,
-      attributes: ['id', 'title', 'slug', 'publishedAt', 'views']
-    }),
-    Article.count({ where: { status: 'published' } })
-  ]);
-
-  data = { categories, tags, recentArticles, articleCount };
-  // 填充实时阅读量
-  await cache.fillViews(data.recentArticles);
-  // 根据实时阅读量再次倒序，取前 5 篇
-  data.recentArticles.sort((a, b) => (b.views || 0) - (a.views || 0));
-  data.recentArticles = data.recentArticles.slice(0, 5);
-  await cache.set(cacheKey, data, CACHE_EXPIRES.SIDEBAR);
-  return data;
-}
+// getSidebarData moved to services/sidebarService.js
 
 // 首页 - 文章列表
 exports.index = async (req, res) => {
@@ -52,18 +24,21 @@ exports.index = async (req, res) => {
         include: [
           { association: 'category', attributes: ['id', 'name', 'slug'] },
           { association: 'author', attributes: ['id', 'nickname'] },
-          { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } }
+          { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
         ],
-        order: [['pinned', 'DESC'], ['publishedAt', 'DESC']],
+        order: [
+          ['pinned', 'DESC'],
+          ['publishedAt', 'DESC'],
+        ],
         limit: PAGE_SIZE,
         offset: (page - 1) * PAGE_SIZE,
-        distinct: true
+        distinct: true,
       });
       articles = result.rows;
       total = result.count;
       await cache.set(cacheKey, { articles, total }, CACHE_EXPIRES.HOME_ARTICLES);
     }
-    
+
     // 填充实时阅读量（确保展示的阅读量包含了 Redis 累积的尚未落库的数据）
     await cache.fillViews(articles);
 
@@ -76,7 +51,7 @@ exports.index = async (req, res) => {
       sidebar,
       currentPage: page,
       totalPages,
-      total
+      total,
     });
   } catch (err) {
     console.error(err);
@@ -96,12 +71,12 @@ exports.archive = async (req, res) => {
       where,
       include: [
         { association: 'category', attributes: ['id', 'name', 'slug'] },
-        { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } }
+        { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
       ],
       order: [['publishedAt', 'DESC']],
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
-      distinct: true
+      distinct: true,
     });
     // 归档页也填充实时阅读量
     await cache.fillViews(result.rows);
@@ -113,7 +88,7 @@ exports.archive = async (req, res) => {
       keyword,
       sidebar,
       currentPage: page,
-      totalPages: Math.ceil(result.count / PAGE_SIZE)
+      totalPages: Math.ceil(result.count / PAGE_SIZE),
     });
   } catch (err) {
     console.error(err);
@@ -147,17 +122,17 @@ exports.search = async (req, res) => {
         status: 'published',
         [Op.or]: [
           { title: { [Op.like]: `%${keyword}%` } },
-          { content: { [Op.like]: `%${keyword}%` } }
-        ]
+          { summary: { [Op.like]: `%${keyword}%` } },
+        ],
       },
       include: [
         { association: 'category', attributes: ['id', 'name', 'slug'] },
-        { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } }
+        { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
       ],
       order: [['publishedAt', 'DESC']],
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
-      distinct: true
+      distinct: true,
     });
     // 搜索结果页填充实时阅读量
     await cache.fillViews(result.rows);
@@ -171,7 +146,7 @@ exports.search = async (req, res) => {
       total: result.count,
       sidebar,
       currentPage: page,
-      totalPages
+      totalPages,
     });
   } catch (err) {
     console.error(err);

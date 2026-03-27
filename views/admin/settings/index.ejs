@@ -64,6 +64,7 @@
 <!-- ── Tab 1：站点信息 ── -->
 <div class="settings-panel active" id="tab-site">
   <form method="POST" action="/admin/settings" id="siteForm" style="max-width: 1000px;">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <input type="hidden" name="_method" value="POST">
 
     <span class="settings-group-title">基本信息</span>

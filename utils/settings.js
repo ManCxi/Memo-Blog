@@ -61,9 +61,7 @@ async function updateSetting(key, value) {
 async function updateSettings(obj) {
   invalidateCache();
   await Promise.all(
-    Object.entries(obj).map(([key, value]) =>
-      Setting.upsert({ key, value: JSON.stringify(value) })
-    )
+    Object.entries(obj).map(([key, value]) => Setting.upsert({ key, value: JSON.stringify(value) }))
   );
 }
 

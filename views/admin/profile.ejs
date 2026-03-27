@@ -8,6 +8,7 @@
   <!-- ── 左侧：基本资料 ── -->
   <div>
     <form method="POST" action="/admin/profile">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <span class="settings-group-title">基本资料</span>
       <div class="settings-group">
         <!-- 头像 -->
@@ -149,7 +150,10 @@ async function submitPasswordForm() {
   try {
     const r = await fetch('/admin/profile/password', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '<%= csrfToken %>'
+      },
       body: JSON.stringify(body)
     });
     const d = await r.json();

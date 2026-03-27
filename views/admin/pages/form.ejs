@@ -8,6 +8,7 @@
 <form method="POST"
   action="<%= page && page.id ? `/admin/pages/${page.id}` : '/admin/pages' %>"
   id="pageForm" style="height: 100%; display: flex; flex-direction: column;">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
   <div class="article-edit-layout" style="flex: 1; height: 100%; min-height: calc(100vh - 120px);">
     <!-- Left: main editor -->
@@ -34,12 +35,12 @@
 
       <!-- Editor -->
       <div class="form-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
-        <div style="width: 100%; display: flex; flex-direction: column; flex: 1; min-height: 0; border: 1px solid var(--surface-border); border-radius: 12px; overflow: hidden; background: var(--surface-1-bg); z-index: 10;">
+        <div class="page-editor-wrap" style="width: 100%; display: flex; flex-direction: column; flex: 1; min-height: 0; border: 1px solid var(--surface-border); border-radius: 12px; overflow: hidden; background: var(--surface-1-bg); z-index: 10;">
           <label class="form-label" style="flex-shrink: 0; padding: 10px 10px 0 10px; margin-bottom: 0;">页面内容 <span style="font-weight:400;color:var(--text-tertiary);">（Rich Text）</span></label>
           <!-- 工具栏 -->
           <div id="editor-toolbar" style="border-bottom: 1px solid var(--surface-border); background: var(--surface-3-bg);"></div>
           <!-- 编辑区 -->
-          <div id="editor-container" style="flex: 1; overflow-y: hidden; min-height: 400px;"></div>
+          <div id="editor-container" style="overflow-y: hidden;"></div>
           <!-- 隐藏的 textarea 用于提交表单 -->
           <textarea id="hiddenContent" name="content" style="display:none;"><%= page ? page.content : '' %></textarea>
         </div>
@@ -74,6 +75,42 @@
   </div>
 </form>
 
+<style>
+#editor-container {
+  min-height: 460px;
+  height: 460px;
+}
+[data-theme='dark'] #pageForm .page-editor-wrap {
+  --w-e-textarea-bg-color: var(--surface-1-bg);
+  --w-e-textarea-color: var(--text-primary);
+  --w-e-textarea-border-color: var(--surface-border);
+  --w-e-textarea-slight-border-color: var(--surface-border);
+  --w-e-textarea-slight-color: var(--text-tertiary);
+  --w-e-textarea-slight-bg-color: var(--surface-2-bg);
+  --w-e-textarea-selected-border-color: color-mix(in srgb, var(--accent) 55%, #fff);
+  --w-e-toolbar-color: var(--text-secondary);
+  --w-e-toolbar-bg-color: var(--surface-3-bg);
+  --w-e-toolbar-active-color: var(--text-primary);
+  --w-e-toolbar-active-bg-color: var(--surface-hover);
+  --w-e-toolbar-disabled-color: var(--text-tertiary);
+  --w-e-toolbar-border-color: var(--surface-border);
+  --w-e-modal-button-bg-color: var(--surface-2-bg);
+  --w-e-modal-button-border-color: var(--surface-border);
+}
+[data-theme='dark'] #pageForm .page-editor-wrap .w-e-text-container [data-slate-editor] pre > code {
+  background: rgba(0, 0, 0, 0.35);
+}
+[data-theme='dark'] #pageForm .page-editor-wrap .w-e-text-placeholder {
+  color: var(--text-tertiary);
+}
+@media (max-width: 767px) {
+  #editor-container {
+    min-height: 320px;
+    height: 320px;
+  }
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
@@ -87,7 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
           customUpload(file, insertFn) {
             const fd = new FormData();
             fd.append('file', file);
-            fetch('/admin/media/upload', { method:'POST', body:fd })
+            fetch('/admin/media/upload', {
+              method: 'POST',
+              headers: { 'X-CSRF-Token': '<%= csrfToken %>' },
+              body: fd
+            })
               .then(r => r.json())
               .then(d => {
                 if (d.ok) insertFn(d.url, d.filename, d.url);

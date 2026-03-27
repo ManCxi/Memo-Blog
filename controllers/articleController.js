@@ -2,47 +2,22 @@ const { Article, Category, Tag } = require('../models');
 const { cache, CACHE_EXPIRES } = require('../utils/cache');
 const { enabled: redisEnabled } = require('../config/redis');
 const { marked } = require('marked');
+const { getSidebarData } = require('../services/sidebarService');
 
 const PAGE_SIZE = 10;
 
 function renderArticleContent(content) {
   const raw = String(content || '');
   if (!raw.trim()) return '';
-  const hasRichHtml = /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(raw);
+  const hasRichHtml =
+    /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(
+      raw
+    );
   if (hasRichHtml) return raw;
   return marked(raw);
 }
 
-// 获取侧边栏数据
-async function getSidebarData() {
-  const cacheKey = 'sidebar:data';
-  let data = await cache.get(cacheKey);
-  if (data) return data;
-
-  const [categories, tags, recentArticles, articleCount] = await Promise.all([
-    Category.findAll({
-      include: [{ association: 'articles', where: { status: 'published' }, required: false }],
-      order: [['sort', 'ASC']]
-    }),
-    Tag.findAll(),
-    Article.findAll({
-      where: { status: 'published' },
-      order: [['views', 'DESC']],
-      limit: 10,
-      attributes: ['id', 'title', 'slug', 'publishedAt', 'views']
-    }),
-    Article.count({ where: { status: 'published' } })
-  ]);
-
-  data = { categories, tags, recentArticles, articleCount };
-  // 填充实时阅读量
-  await cache.fillViews(data.recentArticles);
-  // 根据实时阅读量再次倒序，取前 5 篇
-  data.recentArticles.sort((a, b) => (b.views || 0) - (a.views || 0));
-  data.recentArticles = data.recentArticles.slice(0, 5);
-  await cache.set(cacheKey, data, CACHE_EXPIRES.SIDEBAR);
-  return data;
-}
+// getSidebarData moved to services/sidebarService.js
 
 // 文章详情
 exports.show = async (req, res) => {
@@ -57,15 +32,15 @@ exports.show = async (req, res) => {
         include: [
           { association: 'category', attributes: ['id', 'name', 'slug'] },
           { association: 'author', attributes: ['id', 'nickname', 'avatar'] },
-          { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } }
-        ]
+          { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
+        ],
       });
       if (!article) return res.status(404).render('404', { title: '文章不存在' });
       await cache.set(cacheKey, article, CACHE_EXPIRES.ARTICLE_DETAIL);
     }
 
     // 阅读量 +1
-    let totalViews = (article.views || 0);
+    let totalViews = article.views || 0;
     if (redisEnabled) {
       await cache.incrView(article.id);
       const extraViews = await cache.getView(article.id);
@@ -84,13 +59,13 @@ exports.show = async (req, res) => {
       Article.findOne({
         where: { status: 'published', id: { [Op.lt]: article.id } },
         order: [['id', 'DESC']],
-        attributes: ['id', 'title', 'slug']
+        attributes: ['id', 'title', 'slug'],
       }).catch(() => null),
       Article.findOne({
         where: { status: 'published', id: { [Op.gt]: article.id } },
         order: [['id', 'ASC']],
-        attributes: ['id', 'title', 'slug']
-      }).catch(() => null)
+        attributes: ['id', 'title', 'slug'],
+      }).catch(() => null),
     ]);
 
     const sidebar = await getSidebarData();
@@ -102,7 +77,7 @@ exports.show = async (req, res) => {
       totalViews,
       prevArticle,
       nextArticle,
-      sidebar
+      sidebar,
     });
   } catch (err) {
     console.error(err);
@@ -131,12 +106,12 @@ exports.category = async (req, res) => {
       where,
       include: [
         { association: 'category', attributes: ['id', 'name', 'slug'] },
-        { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } }
+        { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
       ],
       order: [['createdAt', 'DESC']],
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
-      distinct: true
+      distinct: true,
     });
 
     // 填充实时阅读量
@@ -155,7 +130,7 @@ exports.category = async (req, res) => {
       total: result.count,
       sidebar,
       currentPage: page,
-      totalPages
+      totalPages,
     });
   } catch (err) {
     console.error(err);
@@ -179,14 +154,14 @@ exports.tag = async (req, res) => {
           association: 'tags',
           where: { id: tag.id },
           attributes: ['id', 'name', 'slug'],
-          through: { attributes: [] }
+          through: { attributes: [] },
         },
-        { association: 'category', attributes: ['id', 'name', 'slug'] }
+        { association: 'category', attributes: ['id', 'name', 'slug'] },
       ],
       order: [['createdAt', 'DESC']],
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
-      distinct: true
+      distinct: true,
     });
 
     // 填充实时阅读量
@@ -205,7 +180,7 @@ exports.tag = async (req, res) => {
       total: result.count,
       sidebar,
       currentPage: page,
-      totalPages
+      totalPages,
     });
   } catch (err) {
     console.error(err);

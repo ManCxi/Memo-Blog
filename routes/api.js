@@ -2,18 +2,9 @@ const express = require('express');
 const router = express.Router();
 const apiController = require('../controllers/apiController');
 
-// 简单身份验证中间件 (针对 API)
-const requireApiLogin = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    // 假设这是有效的 (为了复刻，简单处理，真实应用需验证 JWT，或者共享 session)
-    return next();
-  }
-  if (req.session && req.session.user) {
-    return next();
-  }
-  return res.status(401).json({ error: 'Unauthorized' });
-};
+const { apiAuth } = require('../middleware/apiAuth');
+
+const requireApiLogin = apiAuth;
 
 // ── Articles ──
 router.get('/articles', apiController.getArticles);

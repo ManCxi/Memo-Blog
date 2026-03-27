@@ -9,8 +9,8 @@ const options = {
   dialect,
   logging: false,
   define: {
-    timestamps: true
-  }
+    timestamps: true,
+  },
 };
 
 if (dialect === 'sqlite') {
@@ -30,8 +30,8 @@ if (dialect === 'postgres' && process.env.DB_SSL === 'true') {
   options.dialectOptions = {
     ssl: {
       require: true,
-      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
-    }
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+    },
   };
 }
 

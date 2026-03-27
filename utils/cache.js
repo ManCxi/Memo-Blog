@@ -1,11 +1,11 @@
 const { client: redis, enabled: redisEnabled } = require('../config/redis');
 
 const CACHE_EXPIRES = {
-  HOME_ARTICLES: 300,    // 首页文章列表 5分钟
-  ARTICLE_DETAIL: 600,   // 文章详情 10分钟
-  CATEGORIES: 3600,      // 分类列表 1小时
-  TAGS: 3600,            // 标签列表 1小时
-  SIDEBAR: 600           // 侧边栏数据 10分钟
+  HOME_ARTICLES: 300, // 首页文章列表 5分钟
+  ARTICLE_DETAIL: 600, // 文章详情 10分钟
+  CATEGORIES: 3600, // 分类列表 1小时
+  TAGS: 3600, // 标签列表 1小时
+  SIDEBAR: 600, // 侧边栏数据 10分钟
 };
 
 const cache = {
@@ -38,10 +38,27 @@ const cache = {
     }
   },
 
+  async scanKeys(pattern) {
+    if (!redisEnabled) return [];
+    let cursor = '0';
+    let keys = [];
+    try {
+      do {
+        const [nextCursor, foundKeys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys = keys.concat(foundKeys);
+      } while (cursor !== '0');
+      return keys;
+    } catch (err) {
+      console.error('Redis SCAN 失败:', err.message);
+      return [];
+    }
+  },
+
   async delPattern(pattern) {
     if (!redisEnabled) return;
     try {
-      const keys = await redis.keys(pattern);
+      const keys = await this.scanKeys(pattern);
       if (keys.length > 0) {
         await redis.del(...keys);
       }
@@ -74,7 +91,7 @@ const cache = {
   async getViewMap(articleIds) {
     if (!redisEnabled || !articleIds.length) return {};
     try {
-      const keys = articleIds.map(id => `article:view:${id}`);
+      const keys = articleIds.map((id) => `article:view:${id}`);
       const counts = await redis.mget(...keys);
       const map = {};
       articleIds.forEach((id, i) => {
@@ -92,15 +109,15 @@ const cache = {
     if (!articles || (Array.isArray(articles) && articles.length === 0)) return articles;
     const isArray = Array.isArray(articles);
     const list = isArray ? articles : [articles];
-    const ids = list.map(a => a.id);
+    const ids = list.map((a) => a.id);
     const viewMap = await this.getViewMap(ids);
-    list.forEach(a => {
+    list.forEach((a) => {
       const extra = viewMap[a.id] || 0;
       // 注意：这里修改的是内存中的对象，用于视图展示，不会自动同步到数据库
       // 这里的 views 是数据库/缓存中的值，extra 是 Redis 中的增量
-      const currentViews = (a.views || 0);
+      const currentViews = a.views || 0;
       const total = currentViews + extra;
-      
+
       if (typeof a.setDataValue === 'function') {
         a.setDataValue('views', total);
       } else {
@@ -116,7 +133,7 @@ const cache = {
   async syncViews(Article) {
     if (!redisEnabled) return;
     try {
-      const keys = await redis.keys('article:view:*');
+      const keys = await this.scanKeys('article:view:*');
       if (keys.length === 0) return;
 
       for (const key of keys) {
@@ -125,7 +142,7 @@ const cache = {
         if (count > 0) {
           await Article.increment('views', { by: count, where: { id } });
           await redis.del(key);
-          
+
           // 获取更新后的文章 slug 用于清除详情缓存
           const article = await Article.findByPk(id, { attributes: ['slug'] });
           if (article) {
@@ -139,7 +156,7 @@ const cache = {
     } catch (err) {
       console.error('同步阅读量失败:', err.message);
     }
-  }
+  },
 };
 
 module.exports = { cache, CACHE_EXPIRES };

@@ -1,113 +1,15 @@
 const path = require('path');
 const fs = require('fs');
-const sharp = require('sharp');
 const { Op } = require('sequelize');
 const { Attachment } = require('../models');
-const { UPLOADS_ROOT, resolveUploadDiskPath, getRelativeUploadPath } = require('../config/uploadsPath');
+const {
+  UPLOADS_ROOT,
+  resolveUploadDiskPath,
+  getRelativeUploadPath,
+} = require('../config/uploadsPath');
+const { getFileType, formatSize, compressImageIfPossible } = require('../services/mediaService');
 
-// MIME 类型 → 分类映射
-function getFileType(mimetype, filename) {
-  if (!mimetype || mimetype === 'application/octet-stream') {
-    const ext = path.extname(filename).toLowerCase();
-    const imgExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico', '.bmp', '.jfif'];
-    const vidExts = ['.mp4', '.webm', '.avi', '.mov', '.mkv'];
-    const audExts = ['.mp3', '.wav', '.ogg', '.flac', '.aac'];
-    const docExts = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.md'];
-    if (imgExts.includes(ext)) return 'image';
-    if (vidExts.includes(ext)) return 'video';
-    if (audExts.includes(ext)) return 'audio';
-    if (docExts.includes(ext)) return 'document';
-    return 'other';
-  }
-  if (mimetype.startsWith('image/')) return 'image';
-  if (mimetype.startsWith('video/')) return 'video';
-  if (mimetype.startsWith('audio/')) return 'audio';
-  const docMimes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats', 'text/plain', 'text/markdown'];
-  if (docMimes.some(m => mimetype.startsWith(m))) return 'document';
-  return 'other';
-}
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-async function compressImageIfPossible(filePath, mimetype) {
-  const fallback = { filePath, size: fs.statSync(filePath).size, mimetype: mimetype || 'application/octet-stream' };
-  if (!mimetype || !mimetype.startsWith('image/')) return fallback;
-  try {
-    const metadata = await sharp(filePath, { animated: true, failOn: 'none' }).metadata();
-    if (!metadata || !metadata.format) return fallback;
-    if (metadata.pages && metadata.pages > 1) return fallback;
-    const format = String(metadata.format).toLowerCase();
-    if (!['jpeg', 'jpg', 'png', 'webp'].includes(format)) return fallback;
-
-    const originalSize = fallback.size;
-    const sourceExt = path.extname(filePath).toLowerCase();
-    const sourceName = path.basename(filePath, sourceExt);
-    const sourceDir = path.dirname(filePath);
-    const candidates = [];
-    const width = Number(metadata.width) || 0;
-    const height = Number(metadata.height) || 0;
-
-    const buildBase = () => {
-      let pipeline = sharp(filePath, { failOn: 'none' }).rotate();
-      if (width > 2560 || height > 2560) {
-        pipeline = pipeline.resize({ width: 2560, height: 2560, fit: 'inside', withoutEnlargement: true });
-      }
-      return pipeline;
-    };
-
-    const addCandidate = async (pipeline, ext, outputMime) => {
-      const tmpName = `${sourceName}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const tmpPath = path.join(sourceDir, tmpName);
-      await pipeline.toFile(tmpPath);
-      const stat = fs.statSync(tmpPath);
-      candidates.push({ path: tmpPath, size: stat.size, mimetype: outputMime, ext });
-    };
-
-    if (format === 'jpeg' || format === 'jpg') {
-      await addCandidate(buildBase().jpeg({ quality: 78, mozjpeg: true, progressive: true, chromaSubsampling: '4:2:0' }), 'jpg', 'image/jpeg');
-    }
-    if (format === 'png') {
-      await addCandidate(buildBase().png({ quality: 78, compressionLevel: 9, palette: true, effort: 10 }), 'png', 'image/png');
-    }
-    if (format === 'webp') {
-      await addCandidate(buildBase().webp({ quality: 78, alphaQuality: 80, effort: 6 }), 'webp', 'image/webp');
-    }
-    await addCandidate(buildBase().webp({ quality: metadata.hasAlpha ? 80 : 76, alphaQuality: 80, effort: 6 }), 'webp', 'image/webp');
-
-    if (!candidates.length) return fallback;
-    let best = candidates[0];
-    for (const item of candidates) {
-      if (item.size < best.size) best = item;
-    }
-    const minSavingRatio = 0.05;
-    if (best.size >= originalSize * (1 - minSavingRatio)) {
-      for (const item of candidates) {
-        if (fs.existsSync(item.path)) fs.unlinkSync(item.path);
-      }
-      return fallback;
-    }
-
-    const bestExt = `.${best.ext}`;
-    const targetPath = sourceExt === bestExt ? filePath : path.join(sourceDir, `${sourceName}${bestExt}`);
-    for (const item of candidates) {
-      if (item.path !== best.path && fs.existsSync(item.path)) fs.unlinkSync(item.path);
-    }
-    if (best.path !== targetPath) {
-      if (fs.existsSync(targetPath)) fs.unlinkSync(targetPath);
-      fs.renameSync(best.path, targetPath);
-    } else if (best.path !== filePath) {
-      fs.renameSync(best.path, filePath);
-    }
-    if (targetPath !== filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    return { filePath: targetPath, size: fs.statSync(targetPath).size, mimetype: best.mimetype };
-  } catch (err) {
-    return fallback;
-  }
-}
+// Helpers moved to services/mediaService.js
 
 // 附件列表页（HTML 渲染）
 exports.index = async (req, res) => {
@@ -123,34 +25,49 @@ exports.index = async (req, res) => {
       where.filename = { [Op.like]: `%${keyword}%` };
     }
 
-    const rows = await Attachment.findAll({ order: [['createdAt', 'DESC']] });
+    // 按类型映射到 DB 查询
+    if (type !== 'all') {
+      if (type === 'image') where.mimetype = { [Op.like]: 'image/%' };
+      else if (type === 'video') where.mimetype = { [Op.like]: 'video/%' };
+      else if (type === 'audio') where.mimetype = { [Op.like]: 'audio/%' };
+      else if (type === 'document') {
+        where.mimetype = {
+          [Op.or]: [
+            { [Op.like]: 'application/pdf%' },
+            { [Op.like]: 'text/%' },
+            { [Op.like]: 'application/msword%' },
+            { [Op.like]: 'application/vnd.openxmlformats%' },
+          ],
+        };
+      }
+    }
 
-    // 按类型过滤
-    const filtered = type === 'all'
-      ? rows
-      : rows.filter(r => getFileType(r.mimetype, r.filename) === type);
+    const { count: total, rows } = await Attachment.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset: (page - 1) * limit,
+    });
 
-    // 关键词过滤（在内存中，避免 SQLite LIKE 大小写问题）
-    const searched = keyword
-      ? filtered.filter(r => r.filename.toLowerCase().includes(keyword.toLowerCase()))
-      : filtered;
-
-    // 分页
-    const total = searched.length;
-    const offset = (page - 1) * limit;
-    const items = searched.slice(offset, offset + limit).map(r => ({
+    const items = rows.map((r) => ({
       ...r.toJSON(),
       fileType: getFileType(r.mimetype, r.filename),
       sizeFormatted: formatSize(r.size || 0),
-      isImage: getFileType(r.mimetype, r.filename) === 'image'
+      isImage: getFileType(r.mimetype, r.filename) === 'image',
     }));
 
     const totalPages = Math.ceil(total / limit);
 
     res.render('admin/media/index', {
       title: '附件库',
-      items, total, page, totalPages, limit,
-      keyword, type, view
+      items,
+      total,
+      page,
+      totalPages,
+      limit,
+      keyword,
+      type,
+      view,
     });
   } catch (err) {
     console.error(err);
@@ -165,13 +82,33 @@ exports.list = async (req, res) => {
     const limit = parseInt(req.query.limit) || 30;
     const keyword = req.query.keyword || '';
     const type = req.query.type || 'all';
+
     const where = {};
-    const rows = await Attachment.findAll({ order: [['createdAt', 'DESC']] });
-    const filtered = type === 'all' ? rows : rows.filter(r => getFileType(r.mimetype, r.filename) === type);
-    const searched = keyword ? filtered.filter(r => r.filename.toLowerCase().includes(keyword.toLowerCase())) : filtered;
-    const total = searched.length;
-    const offset = (page - 1) * limit;
-    const items = searched.slice(offset, offset + limit).map(r => ({
+    if (keyword) where.filename = { [Op.like]: `%${keyword}%` };
+    if (type !== 'all') {
+      if (type === 'image') where.mimetype = { [Op.like]: 'image/%' };
+      else if (type === 'video') where.mimetype = { [Op.like]: 'video/%' };
+      else if (type === 'audio') where.mimetype = { [Op.like]: 'audio/%' };
+      else if (type === 'document') {
+        where.mimetype = {
+          [Op.or]: [
+            { [Op.like]: 'application/pdf%' },
+            { [Op.like]: 'text/%' },
+            { [Op.like]: 'application/msword%' },
+            { [Op.like]: 'application/vnd.openxmlformats%' },
+          ],
+        };
+      }
+    }
+
+    const { count: total, rows } = await Attachment.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset: (page - 1) * limit,
+    });
+
+    const items = rows.map((r) => ({
       id: r.id,
       filename: r.filename,
       path: r.path,
@@ -179,7 +116,7 @@ exports.list = async (req, res) => {
       sizeFormatted: formatSize(r.size || 0),
       mimetype: r.mimetype,
       fileType: getFileType(r.mimetype, r.filename),
-      createdAt: r.createdAt
+      createdAt: r.createdAt,
     }));
     res.json({ ok: true, items, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err) {
@@ -204,8 +141,8 @@ exports.detail = async (req, res) => {
         fileType: getFileType(data.mimetype, data.filename),
         size: data.size || 0,
         sizeFormatted: formatSize(data.size || 0),
-        createdAt: data.createdAt
-      }
+        createdAt: data.createdAt,
+      },
     });
   } catch (err) {
     console.error(err);
@@ -229,7 +166,7 @@ exports.upload = async (req, res) => {
       filename: displayName,
       path: urlPath,
       mimetype: compressed.mimetype,
-      size: compressed.size || size || 0
+      size: compressed.size || size || 0,
     });
 
     res.json({ ok: true, url: urlPath, id: att.id, filename: displayName });
@@ -246,7 +183,7 @@ exports.deleteByUrl = async (req, res) => {
     if (!url) {
       return res.status(400).json({ ok: false, message: '未提供 url' });
     }
-    
+
     // 只处理本站上传的文件 (以 /uploads/ 开头)
     if (!url.startsWith('/uploads/')) {
       return res.json({ ok: true, message: '非本站上传文件，忽略' });
@@ -257,7 +194,11 @@ exports.deleteByUrl = async (req, res) => {
       // 数据库没有，但可能磁盘有
       const diskPath = resolveUploadDiskPath(url);
       if (diskPath && fs.existsSync(diskPath)) {
-        try { fs.unlinkSync(diskPath); } catch (e) { console.error('Failed to delete orphaned file:', e); }
+        try {
+          fs.unlinkSync(diskPath);
+        } catch (e) {
+          console.error('Failed to delete orphaned file:', e);
+        }
       }
       return res.json({ ok: true, message: '文件已删除' });
     }
@@ -267,7 +208,11 @@ exports.deleteByUrl = async (req, res) => {
     if (diskPath && fs.existsSync(diskPath)) {
       const stat = fs.statSync(diskPath);
       if (!stat.isDirectory()) {
-        try { fs.unlinkSync(diskPath); } catch (e) { console.error('Failed to delete file:', e); }
+        try {
+          fs.unlinkSync(diskPath);
+        } catch (e) {
+          console.error('Failed to delete file:', e);
+        }
       }
     }
     await att.destroy();
@@ -287,7 +232,11 @@ exports.destroy = async (req, res) => {
     if (diskPath && fs.existsSync(diskPath)) {
       const stat = fs.statSync(diskPath);
       if (!stat.isDirectory()) {
-        try { fs.unlinkSync(diskPath); } catch (e) { console.error('Failed to delete file:', e); }
+        try {
+          fs.unlinkSync(diskPath);
+        } catch (e) {
+          console.error('Failed to delete file:', e);
+        }
       }
     }
     await att.destroy();
@@ -306,7 +255,9 @@ exports.batchDestroy = async (req, res) => {
       return res.status(400).json({ ok: false, message: '未提供 ids' });
     }
     const rawIds = Array.isArray(ids) ? ids : String(ids).split(',');
-    const idList = [...new Set(rawIds.map(v => parseInt(v, 10)).filter(v => Number.isInteger(v) && v > 0))];
+    const idList = [
+      ...new Set(rawIds.map((v) => parseInt(v, 10)).filter((v) => Number.isInteger(v) && v > 0)),
+    ];
     if (!idList.length) {
       return res.status(400).json({ ok: false, message: '未提供有效 ids' });
     }
@@ -320,7 +271,9 @@ exports.batchDestroy = async (req, res) => {
           if (!stat.isDirectory()) {
             fs.unlinkSync(diskPath);
           }
-        } catch (e) { console.error('Failed to delete file:', e); }
+        } catch (e) {
+          console.error('Failed to delete file:', e);
+        }
       }
       await att.destroy();
     }
@@ -360,24 +313,30 @@ exports.sync = async (req, res) => {
     for (const fullPath of allFiles) {
       const relativePath = path.relative(uploadsDir, fullPath).replace(/\\/g, '/');
       const urlPath = '/uploads/' + relativePath;
-      
+
       const existing = await Attachment.findOne({ where: { path: urlPath } });
       if (!existing) {
         const stat = fs.statSync(fullPath);
         const filename = path.basename(fullPath);
         const ext = path.extname(filename).toLowerCase();
         const mimeMap = {
-          '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-          '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
-          '.pdf': 'application/pdf', '.mp4': 'video/mp4', '.mp3': 'audio/mpeg',
-          '.jfif': 'image/jpeg'
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.gif': 'image/gif',
+          '.webp': 'image/webp',
+          '.svg': 'image/svg+xml',
+          '.pdf': 'application/pdf',
+          '.mp4': 'video/mp4',
+          '.mp3': 'audio/mpeg',
+          '.jfif': 'image/jpeg',
         };
         await Attachment.create({
           filename,
           path: urlPath,
           mimetype: mimeMap[ext] || 'application/octet-stream',
           size: stat.size,
-          createdAt: stat.mtime
+          createdAt: stat.mtime,
         });
         synced++;
       }
@@ -388,5 +347,3 @@ exports.sync = async (req, res) => {
     res.json({ ok: false, message: err.message });
   }
 };
-
- 
