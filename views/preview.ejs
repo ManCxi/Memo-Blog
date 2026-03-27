@@ -8,7 +8,7 @@
     <span class="breadcrumb-sep">›</span>
     <span id="previewBreadcrumbCategory">全部分类</span>
     <span class="breadcrumb-sep">›</span>
-    <span style="color:var(--text-secondary);" id="previewBreadcrumbTitle">预览文章</span>
+    <span class="breadcrumb-current" id="previewBreadcrumbTitle">预览文章</span>
   </div>
 
   <div class="article-layout">
@@ -239,5 +239,4 @@ function generateTOC() {
 // 告诉父窗口已就绪
 window.parent.postMessage({ type: 'PREVIEW_READY' }, '*');
 </script>
-
 

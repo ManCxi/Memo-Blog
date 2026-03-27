@@ -10,6 +10,7 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(16, 'SESSION_SECRET must be at least 16 characters long'),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters long'),
   REDIS_URL: z.string().url().optional(),
+  TRUST_PROXY: z.string().optional(),
   ADMIN_USER: z.string().default('admin'),
   ADMIN_PASS: z.string().min(6).default('123456'),
   MAX_UPLOAD_SIZE: z.string().transform(Number).default('5242880'), // 5MB

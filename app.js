@@ -19,6 +19,20 @@ const adminRouter = require('./routes/admin');
 const apiRouter = require('./routes/api');
 
 const app = express();
+const trustProxyRaw = env.TRUST_PROXY;
+const trustProxy =
+  typeof trustProxyRaw === 'string' && trustProxyRaw.trim() !== ''
+    ? trustProxyRaw === 'true'
+      ? true
+      : trustProxyRaw === 'false'
+        ? false
+        : Number.isNaN(Number(trustProxyRaw))
+          ? trustProxyRaw
+          : Number(trustProxyRaw)
+    : env.NODE_ENV === 'production'
+      ? 1
+      : false;
+app.set('trust proxy', trustProxy);
 
 // 安全中间件
 app.use(
@@ -65,6 +79,7 @@ const sessionOptions = {
   secret: env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  proxy: trustProxy ? true : undefined,
   name: 'blog.sid',
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7,
@@ -134,6 +149,9 @@ app.use(
   adminRouter
 );
 app.use('/api', apiRouter);
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+  res.status(204).end();
+});
 
 // 404 处理
 app.use((req, res) => {

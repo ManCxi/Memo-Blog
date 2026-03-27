@@ -10,7 +10,7 @@
     <a href="/category/<%= article.category.slug %>"><%= article.category.name %></a>
     <span class="breadcrumb-sep">›</span>
     <% } %>
-    <span style="color:var(--text-secondary);"><%= article.title %></span>
+    <span class="breadcrumb-current"><%= article.title %></span>
   </div>
 
   <div class="article-layout">

@@ -9,14 +9,46 @@
   font-size: 13px;
   color: var(--text-tertiary);
   margin-bottom: 20px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .breadcrumb a {
   color: var(--text-tertiary);
   text-decoration: none;
+  flex-shrink: 0;
 }
 .breadcrumb a:hover {
   color: var(--accent);
 }
 .breadcrumb-sep {
   color: var(--surface-border);
+  flex-shrink: 0;
+}
+.breadcrumb-current {
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 767px) {
+  .breadcrumb {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--surface-1-bg);
+    border: 1px solid var(--surface-border);
+    box-shadow: var(--surface-shadow-2);
+    font-size: 12px;
+    gap: 5px;
+  }
+  .breadcrumb a,
+  .breadcrumb-current {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .breadcrumb-sep {
+    opacity: 0.7;
+  }
 }
