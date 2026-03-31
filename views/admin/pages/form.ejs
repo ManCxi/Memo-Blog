@@ -8,150 +8,106 @@
 
 <form method="POST"
   action="<%= page && page.id ? `/admin/pages/${page.id}` : '/admin/pages' %>"
-  id="pageForm" style="height: 100%; display: flex; flex-direction: column;">
+  id="pageForm" class="article-form-root">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-  <div class="article-edit-layout" style="flex: 1; height: 100%; min-height: calc(100vh - 120px);">
-    <!-- Left: main editor -->
-    <div class="article-editor-wrap" style="display: flex; flex-direction: column; height: 100%; overflow-y: auto;">
-      <!-- Title -->
-      <div class="form-section" style="padding-bottom:20px; flex-shrink: 0;">
-        <input type="text" name="title" class="form-title-input"
+  <!-- Top actions -->
+  <div class="article-topbar">
+    <div class="article-topbar-inner">
+      <div class="article-topbar-title">
+        <input type="text" name="title" class="form-title-input form-title-input-topbar"
           placeholder="请输入页面标题…"
           value="<%= page ? page.title : '' %>" required>
       </div>
+      <div class="article-topbar-actions">
+        <%
+          let btn1Text = '🚀 发布页面';
+          let btn1Status = 'published';
+          let btn2Text = '📄 设为隐藏';
+          let btn2Status = 'hidden';
 
-      <!-- Slug -->
-      <div class="form-section" style="margin-bottom: 20px; flex-shrink: 0;">
-        <label class="form-label">自定义路径 (Slug)</label>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: var(--text-tertiary); font-size: 14px;">/p/</span>
-          <input type="text" name="slug" class="form-control"
-            placeholder="about-me"
-            value="<%= page ? page.slug : '' %>" required
-            style="flex: 1; max-width: 300px;">
-        </div>
-        <p class="settings-desc" style="margin-left: 28px;">页面 URL 将是：domain.com/p/your-slug</p>
+          if (page && page.id) {
+            if (page.status === 'published') {
+              btn1Text = '💾 保存修改';
+              btn1Status = 'published';
+              btn2Text = '📄 设为隐藏';
+              btn2Status = 'hidden';
+            } else {
+              btn1Text = '💾 保存修改';
+              btn1Status = 'hidden';
+              btn2Text = '🚀 发布页面';
+              btn2Status = 'published';
+            }
+          }
+        %>
+        <button type="submit" name="status" value="<%= btn1Status %>" class="btn btn-primary btn-sm justify-center"><%= btn1Text %></button>
+        <button type="submit" name="status" value="<%= btn2Status %>" class="btn btn-secondary btn-sm justify-center"><%= btn2Text %></button>
+        <a href="/admin/pages" class="btn btn-danger btn-sm justify-center">✕ 取消</a>
+        <button type="button" class="btn btn-secondary btn-sm justify-center" id="openPageSettingsBtn" onclick="openPageSettings()">⚙️ 页面设置</button>
       </div>
+    </div>
+  </div>
 
-      <!-- Editor Type Toggle -->
-      <div class="form-section" style="margin-bottom: 20px; flex-shrink: 0;">
-        <label class="form-label">编辑器模式</label>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <label class="checkbox-label-inline" style="margin: 0;">
-            <input type="radio" name="editorType" value="html" <%= !page || page.editorType === 'html' ? 'checked' : '' %> onchange="switchEditor('html')"> 富文本
-          </label>
-          <label class="checkbox-label-inline" style="margin: 0;">
-            <input type="radio" name="editorType" value="markdown" <%= page && page.editorType === 'markdown' ? 'checked' : '' %> onchange="switchEditor('markdown')"> Markdown
-          </label>
-          <button type="button" class="btn btn-secondary btn-sm <%= page && page.editorType === 'markdown' ? '' : 'd-none' %>" id="importMdBtn" onclick="triggerMdImport()">📥 导入 MD</button>
-          <input type="file" id="mdFileInput" style="display:none;" accept=".md" onchange="handleMdFile(this)">
+  <div class="article-edit-layout">
+    <div class="article-editor-wrap">
+      <div class="form-section editor-section">
+        <div class="form-mb">
+          <label class="form-label">编辑器模式</label>
+          <div class="d-flex align-items-center gap-16">
+            <label class="checkbox-label-inline m-0">
+              <input type="radio" name="editorType" value="html" <%= !page || page.editorType === 'html' ? 'checked' : '' %> onchange="switchEditor('html')"> 富文本
+            </label>
+            <label class="checkbox-label-inline m-0">
+              <input type="radio" name="editorType" value="markdown" <%= page && page.editorType === 'markdown' ? 'checked' : '' %> onchange="switchEditor('markdown')"> Markdown
+            </label>
+            <button type="button" class="btn btn-secondary btn-sm <%= page && page.editorType === 'markdown' ? '' : 'd-none' %>" id="importMdBtn" onclick="triggerMdImport()">📥 导入 MD</button>
+            <input type="file" id="mdFileInput" style="display:none;" accept=".md" onchange="handleMdFile(this)">
+          </div>
         </div>
-      </div>
 
-      <!-- Editor -->
-      <div class="form-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
-        <div class="page-editor-wrap" style="width: 100%; display: flex; flex-direction: column; flex: 1; min-height: 0; border: 1px solid var(--surface-border); border-radius: 12px; overflow: hidden; background: var(--surface-1-bg); z-index: 10;">
-          <label class="form-label" style="flex-shrink: 0; padding: 10px 10px 0 10px; margin-bottom: 0;">页面内容</label>
+        <div class="editor-container-wrap">
+          <label class="form-label editor-inner-label">页面内容</label>
           <div id="wang-editor-area" class="<%= page && page.editorType === 'markdown' ? 'd-none' : '' %>">
-            <!-- 工具栏 -->
-            <div id="editor-toolbar" style="border-bottom: 1px solid var(--surface-border); background: var(--surface-3-bg);"></div>
-            <!-- 编辑区 -->
+            <div id="editor-toolbar" class="editor-toolbar-wrap"></div>
             <div id="editor-container" class="editor-content-area"></div>
           </div>
           <div id="markdown-editor-area" class="<%= !page || page.editorType === 'html' ? 'd-none' : '' %>">
             <textarea id="markdown-editor" class="markdown-textarea"></textarea>
           </div>
-          <!-- 隐藏的 textarea 用于提交表单 -->
           <textarea id="hiddenContent" name="content" style="display:none;"><%= page ? page.content : '' %></textarea>
         </div>
-      </div>
-    </div>
-
-    <!-- Right: settings -->
-    <div style="display:flex;flex-direction:column;gap:16px;">
-      <!-- Submit / Actions -->
-      <div class="form-section">
-        <div class="form-section-title">操作</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <%
-            let btn1Text = '🚀 发布页面';
-            let btn1Status = 'published';
-            let btn2Text = '📄 设为隐藏';
-            let btn2Status = 'hidden';
-
-            if (page && page.id) {
-              if (page.status === 'published') {
-                btn1Text = '💾 保存修改';
-                btn1Status = 'published';
-                btn2Text = '📄 设为隐藏';
-                btn2Status = 'hidden';
-              } else {
-                btn1Text = '💾 保存修改';
-                btn1Status = 'hidden';
-                btn2Text = '🚀 发布页面';
-                btn2Status = 'published';
-              }
-            }
-          %>
-          <button type="submit" name="status" value="<%= btn1Status %>" class="btn btn-primary" style="justify-content:center;">
-            <%= btn1Text %>
-          </button>
-          <button type="submit" name="status" value="<%= btn2Status %>" class="btn btn-secondary" style="justify-content:center;">
-            <%= btn2Text %>
-          </button>
-          <a href="/admin/pages" class="btn btn-secondary" style="justify-content:center;">✕ 取消</a>
-        </div>
-      </div>
-      
-      <!-- Publish settings -->
-      <div class="form-section">
-        <div class="form-section-title">显示设置</div>
       </div>
     </div>
   </div>
 </form>
 
-<style>
-#editor-container {
-  min-height: 800px;
-}
-.w-e-text-container {
-  height: 800px !important;
-}
-[data-theme='dark'] #pageForm .page-editor-wrap {
-  --w-e-textarea-bg-color: var(--surface-1-bg);
-  --w-e-textarea-color: var(--text-primary);
-  --w-e-textarea-border-color: var(--surface-border);
-  --w-e-textarea-slight-border-color: var(--surface-border);
-  --w-e-textarea-slight-color: var(--text-tertiary);
-  --w-e-textarea-slight-bg-color: var(--surface-2-bg);
-  --w-e-textarea-selected-border-color: color-mix(in srgb, var(--accent) 55%, #fff);
-  --w-e-toolbar-color: var(--text-secondary);
-  --w-e-toolbar-bg-color: var(--surface-3-bg);
-  --w-e-toolbar-active-color: var(--text-primary);
-  --w-e-toolbar-active-bg-color: var(--surface-hover);
-  --w-e-toolbar-disabled-color: var(--text-tertiary);
-  --w-e-toolbar-border-color: var(--surface-border);
-  --w-e-modal-button-bg-color: var(--surface-2-bg);
-  --w-e-modal-button-border-color: var(--surface-border);
-}
-[data-theme='dark'] #pageForm .page-editor-wrap .w-e-text-container [data-slate-editor] pre > code {
-  background: rgba(0, 0, 0, 0.35);
-}
-[data-theme='dark'] #pageForm .page-editor-wrap .w-e-text-placeholder {
-  color: var(--text-tertiary);
-}
-@media (max-width: 767px) {
-  #editor-container {
-    min-height: 320px;
-    height: 320px;
-  }
-}
-</style>
+<!-- Settings drawer -->
+<div class="article-drawer-overlay" id="pageSettingsOverlay" onclick="closePageSettings()"></div>
+<aside class="article-settings-drawer" id="pageSettingsDrawer" aria-hidden="true" role="dialog" aria-label="页面设置">
+  <div class="article-settings-drawer-head">
+    <div class="article-settings-drawer-title">页面设置</div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="closePageSettings()">关闭</button>
+  </div>
+  <div class="article-settings-drawer-body">
+    <div class="article-sidebar-wrap">
+      <div class="form-section">
+        <div class="form-section-title">路径设置</div>
+        <label class="form-label">自定义路径 (Slug)</label>
+        <div class="d-flex align-items-center gap-8">
+          <span style="color: var(--text-tertiary); font-size: 14px;">/p/</span>
+          <input type="text" name="slug" class="form-control form-control-sm"
+            placeholder="about-me"
+            value="<%= page ? page.slug : '' %>" required>
+        </div>
+        <div class="settings-desc" style="margin-top: 8px;">页面 URL 将是：domain.com/p/your-slug</div>
+      </div>
+    </div>
+  </div>
+</aside>
 
 <script src="/libs/marked/marked.min.js"></script>
 <script src="/libs/turndown/turndown.js"></script>
+<script src="/js/admin/page-form.js"></script>
 <script>
 let easyMDE = null;
 
@@ -198,7 +154,7 @@ function initMarkdownEditor() {
   const hiddenContent = document.getElementById('hiddenContent');
   easyMDE = new EasyMDE({
     element: textarea,
-    autoDownloadFontAwesome: true,
+    autoDownloadFontAwesome: false,
     spellChecker: false,
     placeholder: '在此输入 Markdown 内容...',
     status: false,

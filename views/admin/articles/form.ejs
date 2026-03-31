@@ -13,23 +13,52 @@
       enctype="multipart/form-data" id="articleForm" class="article-form-root">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
+      <!-- Top actions (always visible) -->
+      <div class="article-topbar">
+        <div class="article-topbar-inner">
+          <div class="article-topbar-title">
+            <input type="text" name="title" class="form-title-input form-title-input-topbar" placeholder="请输入文章标题…"
+              value="<%= article ? article.title : '' %>" required>
+          </div>
+          <div class="article-topbar-actions">
+          <%
+            let btn1Text = '🚀 发布文章';
+            let btn1Status = 'published';
+            let btn2Text = '💾 存为草稿';
+            let btn2Status = 'draft';
+
+            if (article && article.id) {
+              if (article.status === 'published') {
+                btn1Text = '💾 保存修改';
+                btn1Status = 'published';
+                btn2Text = '📄 撤回草稿';
+                btn2Status = 'draft';
+              } else {
+                btn1Text = '💾 保存修改';
+                btn1Status = 'draft';
+                btn2Text = '🚀 发布文章';
+                btn2Status = 'published';
+              }
+            }
+          %>
+          <button type="submit" name="status" value="<%= btn1Status %>" class="btn btn-primary btn-sm justify-center">
+            <%= btn1Text %>
+          </button>
+          <button type="submit" name="status" value="<%= btn2Status %>" class="btn btn-secondary btn-sm justify-center">
+            <%= btn2Text %>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm justify-center" onclick="openPreviewModal()">👁 预览</button>
+          <a href="/admin/articles" class="btn btn-danger btn-sm justify-center">✕ 取消</a>
+          <button type="button" class="btn btn-secondary btn-sm justify-center" id="openArticleSettingsBtn" onclick="openArticleSettings()">⚙️ 文章设置</button>
+          </div>
+        </div>
+      </div>
+
       <div class="article-edit-layout">
         <!-- Left: main editor -->
         <div class="article-editor-wrap">
-          <!-- Title -->
-          <div class="form-section title-section">
-            <input type="text" name="title" class="form-title-input" placeholder="请输入文章标题…"
-              value="<%= article ? article.title : '' %>" required>
-          </div>
-
           <!-- Summary & Editor -->
           <div class="form-section editor-section">
-            <div class="form-mb">
-              <label class="form-label">文章摘要</label>
-              <textarea name="summary" class="form-control article-summary-fixed"
-                placeholder="简短描述文章内容（可选，不填则自动截取正文）"><%= article ? article.summary : '' %></textarea>
-            </div>
-
             <div class="form-mb">
               <label class="form-label">编辑器模式</label>
               <div class="d-flex align-items-center gap-16">
@@ -61,126 +90,118 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Right: settings -->
-        <div class="article-sidebar-wrap">
-          <!-- Submit / Actions -->
-          <div class="form-section">
-            <div class="form-section-title">操作</div>
-            <div class="d-flex gap-8 flex-wrap">
-              <%
-                let btn1Text = '🚀 发布文章';
-                let btn1Status = 'published';
-                let btn2Text = '💾 存为草稿';
-                let btn2Status = 'draft';
+      <!-- Right drawer: settings -->
+      <div class="article-drawer-overlay" id="articleSettingsOverlay" onclick="closeArticleSettings()"></div>
+      <aside class="article-settings-drawer" id="articleSettingsDrawer" aria-hidden="true" role="dialog" aria-label="文章设置">
+        <div class="article-settings-drawer-head">
+          <div class="article-settings-drawer-title">文章设置</div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeArticleSettings()">关闭</button>
+        </div>
 
-                if (article && article.id) {
-                  if (article.status === 'published') {
-                    btn1Text = '💾 保存修改';
-                    btn1Status = 'published';
-                    btn2Text = '📄 撤回草稿';
-                    btn2Status = 'draft';
-                  } else {
-                    btn1Text = '💾 保存修改';
-                    btn1Status = 'draft';
-                    btn2Text = '🚀 发布文章';
-                    btn2Status = 'published';
+        <div class="article-settings-drawer-body">
+          <div class="article-sidebar-wrap">
+            <!-- Summary -->
+            <div class="form-section">
+              <div class="form-section-title">文章摘要</div>
+              <textarea name="summary" class="form-control article-summary-fixed"
+                placeholder="简短描述文章内容（可选，不填则自动截取正文）"><%= article ? article.summary : '' %></textarea>
+            </div>
+
+            <!-- Publish settings -->
+            <div class="form-section">
+              <div class="form-section-title">发布设置</div>
+              <div class="form-mb">
+                <label class="form-label">发布时间</label>
+                <%
+                  function formatDateTime(date) {
+                    if (!date) return '';
+                    const d = new Date(date);
+                    const z = d.getTimezoneOffset() * 60 * 1000;
+                    const localDate = new Date(d.getTime() - z);
+                    return localDate.toISOString().slice(0, 16);
                   }
-                }
-              %>
-              <button type="submit" name="status" value="<%= btn1Status %>" class="btn btn-primary flex-1 justify-center">
-                <%= btn1Text %>
-              </button>
-              <button type="submit" name="status" value="<%= btn2Status %>" class="btn btn-secondary flex-1 justify-center">
-                <%= btn2Text %>
-              </button>
+                %>
+                <input type="text" id="publishedAtPicker" class="form-control form-control-sm">
+                <input type="hidden" id="publishedAtValue" name="publishedAt"
+                  value="<%= formatDateTime(article ? (article.publishedAt || article.createdAt) : new Date()) %>">
+              </div>
+              <label class="checkbox-label-inline">
+                <input type="checkbox" name="pinned" value="1" <%=article && article.pinned ? 'checked' : '' %>>
+                📌 置顶文章
+              </label>
             </div>
-            <div class="d-flex gap-8 mt-16 flex-wrap">
-              <button type="button" class="btn btn-secondary flex-1 justify-center" onclick="openPreviewModal()">👁 预览</button>
-              <a href="/admin/articles" class="btn btn-danger flex-1 justify-center">✕ 取消</a>
-            </div>
-          </div>
 
-          <!-- Publish settings -->
-          <div class="form-section">
-            <div class="form-section-title">发布设置</div>
-            <div class="form-mb">
-              <label class="form-label">发布时间</label>
-              <%
-                function formatDateTime(date) {
-                  if (!date) return '';
-                  const d = new Date(date);
-                  const z = d.getTimezoneOffset() * 60 * 1000;
-                  const localDate = new Date(d.getTime() - z);
-                  return localDate.toISOString().slice(0, 16);
-                }
-              %>
-              <input type="text" id="publishedAtPicker" class="form-control form-control-sm">
-              <input type="hidden" id="publishedAtValue" name="publishedAt"
-                value="<%= formatDateTime(article ? (article.publishedAt || article.createdAt) : new Date()) %>">
-            </div>
-            <label class="checkbox-label-inline">
-              <input type="checkbox" name="pinned" value="1" <%=article && article.pinned ? 'checked' : '' %>>
-              📌 置顶文章
-            </label>
-          </div>
-
-          <!-- Cover -->
-          <div class="form-section">
-            <div class="form-section-title">封面图片</div>
-            <div class="d-flex flex-column gap-8">
-              <input type="text" name="cover" id="coverUrl" class="form-control form-control-sm"
-                placeholder="URL 或选择附件" value="<%= article ? article.cover : '' %>"
-                oninput="updateCoverPreview(this.value)">
-              <button type="button" class="btn btn-secondary btn-sm justify-center"
-                onclick="openAttachmentPicker(url => { document.getElementById('coverUrl').value = url; updateCoverPreview(url); }, {accept:'image'})">🖼
-                选择图片附件</button>
-            </div>
-            <div class="cover-preview-box" id="coverPreview">
-              <% if (article && article.cover) { %>
-                <img src="<%= article.cover %>" alt="封面">
-              <% } else { %>
-                暂无封面
-              <% } %>
-            </div>
-          </div>
-
-          <!-- Category -->
-          <div class="form-section">
-            <div class="form-section-title">文章分类</div>
-            <% const selectedCategory = article ? categories.find(c => String(c.id) === String(article.CategoryId || '')) : null; %>
-            <div class="category-select" id="categorySelect">
-              <input type="hidden" name="CategoryId" form="articleForm" id="categoryIdInput" value="<%= article ? (article.CategoryId || '') : '' %>">
-              <button type="button" class="category-select-trigger form-control form-control-sm" id="categorySelectTrigger" onclick="toggleCategoryDropdown(event)">
-                <span id="categorySelectLabel"><%= selectedCategory ? selectedCategory.name : '不选分类' %></span>
-                <span class="category-select-arrow">⌄</span>
-              </button>
-              <div class="category-select-menu" id="categorySelectMenu">
-                <button type="button" class="category-option <%= selectedCategory ? '' : 'active' %>" data-value="" data-label="不选分类" onclick="selectCategoryOption(this)">不选分类</button>
-                <% categories.forEach(cat => { %>
-                  <button type="button" class="category-option <%= article && String(article.CategoryId) === String(cat.id) ? 'active' : '' %>" data-value="<%= cat.id %>" data-label="<%= cat.name %>" onclick="selectCategoryOption(this)"><%= cat.name %></button>
-                <% }) %>
+            <!-- Category -->
+            <div class="form-section">
+              <div class="drawer-section-head">
+                <div class="form-section-title m-0">文章分类</div>
+                <button type="button" class="btn btn-secondary btn-xs" onclick="openAddCategoryModal()">+ 创建</button>
+              </div>
+              <% const selectedCategory = article ? categories.find(c => String(c.id) === String(article.CategoryId || '')) : null; %>
+              <div class="category-select category-select-drawer" id="categorySelect">
+                <input type="hidden" name="CategoryId" form="articleForm" id="categoryIdInput" value="<%= article ? (article.CategoryId || '') : '' %>">
+                <button type="button" class="category-select-trigger form-control form-control-sm" id="categorySelectTrigger" onclick="toggleCategoryDropdown(event)">
+                  <span id="categorySelectLabel"><%= selectedCategory ? selectedCategory.name : '不选分类' %></span>
+                  <span class="category-select-arrow">⌄</span>
+                </button>
+                <div class="category-select-menu" id="categorySelectMenu">
+                  <button type="button" class="category-option <%= selectedCategory ? '' : 'active' %>" data-value="" data-label="不选分类" onclick="selectCategoryOption(this)">不选分类</button>
+                  <% categories.forEach(cat => { %>
+                    <button type="button" class="category-option <%= article && String(article.CategoryId) === String(cat.id) ? 'active' : '' %>" data-value="<%= cat.id %>" data-label="<%= cat.name %>" onclick="selectCategoryOption(this)"><%= cat.name %></button>
+                  <% }) %>
+                </div>
               </div>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm quick-add-btn" onclick="openAddCategoryModal()">+ 快速创建分类</button>
-          </div>
 
-          <!-- Tags -->
-          <div class="form-section">
-            <div class="form-section-title">文章标签</div>
-            <div class="checkbox-group">
-              <% tags.forEach(tag=> { %>
-                <div class="checkbox-chip">
-                  <input type="checkbox" name="tagIds" form="articleForm" id="tag_<%= tag.id %>"
-                    value="<%= tag.id %>" <%=selectedTags.includes(tag.id) ? 'checked' : '' %>>
-                  <label for="tag_<%= tag.id %>"># <%= tag.name %></label>
+            <!-- Tags -->
+            <div class="form-section">
+              <div class="drawer-section-head">
+                <div class="form-section-title m-0">文章标签</div>
+                <button type="button" class="btn btn-secondary btn-xs" onclick="openAddTagModal()">+ 创建</button>
+              </div>
+              <div class="tag-multiselect" id="tagSelect">
+                <button type="button" class="tag-multiselect-trigger form-control form-control-sm" id="tagSelectTrigger" onclick="toggleTagDropdown(event)">
+                  <span id="tagSelectLabel">请选择标签</span>
+                  <span class="category-select-arrow">⌄</span>
+                </button>
+                <div class="tag-multiselect-menu" id="tagSelectMenu">
+                  <% tags.forEach(tag=> { %>
+                    <label class="tag-option">
+                      <input type="checkbox" name="tagIds" form="articleForm" id="tag_<%= tag.id %>"
+                        value="<%= tag.id %>" <%=selectedTags.includes(tag.id) ? 'checked' : '' %> onchange="updateTagSelectLabel()">
+                      <span># <%= tag.name %></span>
+                    </label>
+                  <% }) %>
                 </div>
-              <% }) %>
+              </div>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm quick-add-btn" onclick="openAddTagModal()">+ 快速创建标签</button>
+
+            <!-- Cover -->
+            <div class="form-section">
+              <div class="form-section-title">封面图片</div>
+              <input type="hidden" name="cover" id="coverUrl" value="<%= article ? article.cover : '' %>">
+              <div class="cover-picker-box" id="coverPickerBox"
+                onclick="openAttachmentPicker(url => { setCover(url); }, {accept:'image'})"
+                role="button" tabindex="0" aria-label="选择封面图片">
+                <% if (article && article.cover) { %>
+                  <img src="<%= article.cover %>" alt="封面">
+                <% } else { %>
+                  <div class="cover-picker-hint">
+                    <div class="cover-picker-title">点击选择封面图片</div>
+                    <div class="cover-picker-sub">从附件库选择一张图片作为封面</div>
+                  </div>
+                <% } %>
+                <button type="button" class="cover-picker-clear <%= article && article.cover ? '' : 'd-none' %>"
+                  id="coverClearBtn" onclick="event.stopPropagation(); setCover('');">
+                  移除
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </aside>
     </form>
 
     <script src="/libs/marked/marked.min.js"></script>

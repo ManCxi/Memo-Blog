@@ -4,12 +4,18 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Mark current page for scoped CSS fixes
+  document.body.classList.add('article-form-page');
+
   // 1. Initialize Date Picker
   initDatePicker();
 
   // 2. Initialize Editors
   initEditor();
   initMarkdownEditor();
+
+  // 2.5 Initialize settings drawer
+  initArticleSettingsDrawer();
 
   // 3. Category Dropdown Click Outside
   document.addEventListener('click', (e) => {
@@ -18,6 +24,188 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!box.contains(e.target)) closeCategoryDropdown();
   });
 });
+
+function initArticleSettingsDrawer() {
+  const drawer = document.getElementById('articleSettingsDrawer');
+  const overlay = document.getElementById('articleSettingsOverlay');
+  if (!drawer || !overlay) return;
+
+  // Keep drawer unfocusable when closed (prevents aria-hidden + focused descendant warnings)
+  drawer.setAttribute('aria-hidden', 'true');
+  try {
+    drawer.inert = true;
+  } catch (_) {}
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeArticleSettings();
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    const tagBox = document.getElementById('tagSelect');
+    if (tagBox && !tagBox.contains(e.target)) closeTagDropdown();
+    const catBox = document.getElementById('categorySelect');
+    if (catBox && !catBox.contains(e.target)) closeCategoryDropdown();
+  });
+
+  // Initialize tag label once (selected tags -> trigger text)
+  setTimeout(updateTagSelectLabel, 0);
+}
+
+function openArticleSettings() {
+  const drawer = document.getElementById('articleSettingsDrawer');
+  const overlay = document.getElementById('articleSettingsOverlay');
+  if (!drawer || !overlay) return;
+  drawer.classList.add('is-open');
+  overlay.classList.add('is-open');
+  drawer.setAttribute('aria-hidden', 'false');
+  try {
+    drawer.inert = false;
+  } catch (_) {}
+  document.body.classList.add('article-settings-open');
+
+  // Move focus into the drawer for accessibility
+  setTimeout(() => {
+    const focusable = drawer.querySelector(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable && typeof focusable.focus === 'function') focusable.focus();
+  }, 0);
+}
+
+function closeArticleSettings() {
+  const drawer = document.getElementById('articleSettingsDrawer');
+  const overlay = document.getElementById('articleSettingsOverlay');
+  if (!drawer || !overlay) return;
+
+  // If focus is inside drawer, move it away before hiding from AT
+  const active = document.activeElement;
+  if (active && drawer.contains(active) && typeof active.blur === 'function') active.blur();
+  const opener = document.getElementById('openArticleSettingsBtn');
+  if (opener && typeof opener.focus === 'function') opener.focus();
+
+  drawer.classList.remove('is-open');
+  overlay.classList.remove('is-open');
+  drawer.setAttribute('aria-hidden', 'true');
+  try {
+    drawer.inert = true;
+  } catch (_) {}
+  document.body.classList.remove('article-settings-open');
+}
+
+function toggleTagDropdown(event) {
+  if (event) event.stopPropagation();
+  const box = document.getElementById('tagSelect');
+  if (!box) return;
+  const willOpen = !box.classList.contains('open');
+  if (willOpen) closeCategoryDropdown();
+  box.classList.toggle('open', willOpen);
+  if (willOpen) openFloatingDropdown('tagSelectTrigger', 'tagSelectMenu');
+  else closeFloatingDropdown('tagSelectMenu');
+}
+
+function closeTagDropdown() {
+  const box = document.getElementById('tagSelect');
+  if (box) box.classList.remove('open');
+  closeFloatingDropdown('tagSelectMenu');
+}
+
+function openFloatingDropdown(triggerId, menuId) {
+  const trigger = document.getElementById(triggerId);
+  const menu = document.getElementById(menuId);
+  if (!trigger || !menu) return;
+
+  // Attach menu to body so it's not clipped by overflow containers (e.g. drawer body)
+  if (!menu.dataset.portalOriginalParentId) {
+    const parent = menu.parentElement;
+    if (parent && parent.id) menu.dataset.portalOriginalParentId = parent.id;
+  }
+  if (menu.parentElement !== document.body) document.body.appendChild(menu);
+
+  menu.classList.add('floating-dropdown');
+  positionFloatingDropdown(trigger, menu);
+
+  const onReposition = () => positionFloatingDropdown(trigger, menu);
+  const drawerBody = document.querySelector('.article-settings-drawer-body');
+  const onDrawerScroll = () => positionFloatingDropdown(trigger, menu);
+  const onWindowScroll = () => positionFloatingDropdown(trigger, menu);
+
+  menu._floatingHandlers = { onReposition, onDrawerScroll, onWindowScroll, drawerBody };
+  window.addEventListener('resize', onReposition, { passive: true });
+  window.addEventListener('scroll', onWindowScroll, { passive: true, capture: true });
+  if (drawerBody) drawerBody.addEventListener('scroll', onDrawerScroll, { passive: true });
+}
+
+function closeFloatingDropdown(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+
+  const handlers = menu._floatingHandlers;
+  if (handlers) {
+    window.removeEventListener('resize', handlers.onReposition);
+    window.removeEventListener('scroll', handlers.onWindowScroll, true);
+    if (handlers.drawerBody) {
+      handlers.drawerBody.removeEventListener('scroll', handlers.onDrawerScroll);
+    }
+    delete menu._floatingHandlers;
+  }
+
+  menu.classList.remove('floating-dropdown');
+  menu.style.top = '';
+  menu.style.left = '';
+  menu.style.width = '';
+  menu.style.maxHeight = '';
+  menu.style.transformOrigin = '';
+
+  const parentId = menu.dataset.portalOriginalParentId;
+  const parent = parentId ? document.getElementById(parentId) : null;
+  if (parent) parent.appendChild(menu);
+}
+
+function positionFloatingDropdown(trigger, menu) {
+  const r = trigger.getBoundingClientRect();
+  const gap = 6;
+  const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+  const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+  const menuWidth = Math.min(Math.max(r.width, 220), 520);
+  let left = r.left;
+  if (left + menuWidth > vw - 8) left = Math.max(8, vw - 8 - menuWidth);
+  menu.style.position = 'fixed';
+  // Smart placement: open downward if enough space, otherwise open upward.
+  const spaceBelow = vh - (r.bottom + gap) - 8;
+  const spaceAbove = r.top - gap - 8;
+  const openUp = spaceBelow < 220 && spaceAbove > spaceBelow;
+  const top = openUp ? Math.max(8, Math.round(r.top - gap)) : Math.round(r.bottom + gap);
+  menu.style.top = `${top}px`;
+  menu.style.transformOrigin = openUp ? 'bottom right' : 'top right';
+  menu.style.left = `${Math.round(left)}px`;
+  menu.style.width = `${Math.round(menuWidth)}px`;
+  // Constrain height to available viewport space
+  const maxH = Math.max(160, Math.floor(openUp ? spaceAbove : spaceBelow));
+  menu.style.maxHeight = `${maxH}px`;
+}
+
+function updateTagSelectLabel() {
+  const label = document.getElementById('tagSelectLabel');
+  const menu = document.getElementById('tagSelectMenu');
+  if (!label || !menu) return;
+  const checked = Array.from(menu.querySelectorAll('input[name="tagIds"]:checked'));
+  if (checked.length === 0) {
+    label.textContent = '请选择标签';
+    return;
+  }
+  if (checked.length <= 3) {
+    const names = checked
+      .map((el) => {
+        const span = el.parentElement ? el.parentElement.querySelector('span') : null;
+        return span ? span.textContent.replace(/^#\s*/, '# ') : '';
+      })
+      .filter(Boolean);
+    label.textContent = names.join('，');
+  } else {
+    label.textContent = `已选择 ${checked.length} 个标签`;
+  }
+}
 
 /**
  * Initialize Air Datepicker for publishedAt field
@@ -263,7 +451,9 @@ function initMarkdownEditor() {
   if (window.EasyMDE) {
     easyMDE = new window.EasyMDE({
       element: textarea,
-      autoDownloadFontAwesome: true, // Will download from CDN if not provided locally
+      // Avoid loading FontAwesome from CDN (offline friendly).
+      // Toolbar may show no icons, but editor functionality remains.
+      autoDownloadFontAwesome: false,
       spellChecker: false,
       placeholder: '在此输入 Markdown 内容...',
       autofocus: false,
@@ -515,13 +705,31 @@ function handleMdFile(input) {
  * Update cover preview image
  */
 function updateCoverPreview(url) {
-  const preview = document.getElementById('coverPreview');
-  if (!preview) return;
+  const box = document.getElementById('coverPickerBox');
+  const clearBtn = document.getElementById('coverClearBtn');
+  if (clearBtn) clearBtn.classList.toggle('d-none', !url);
+  if (!box) return;
+
   if (url) {
-    preview.innerHTML = `<img src="${url}" alt="封面" style="width:100%;height:auto;display:block;">`;
+    box.innerHTML = `
+      <img src="${url}" alt="封面">
+      <button type="button" class="cover-picker-clear" id="coverClearBtn" onclick="event.stopPropagation(); setCover('');">移除</button>
+    `;
   } else {
-    preview.innerHTML = '暂无封面';
+    box.innerHTML = `
+      <div class="cover-picker-hint">
+        <div class="cover-picker-title">点击选择封面图片</div>
+        <div class="cover-picker-sub">从附件库选择一张图片作为封面</div>
+      </div>
+      <button type="button" class="cover-picker-clear d-none" id="coverClearBtn" onclick="event.stopPropagation(); setCover('');">移除</button>
+    `;
   }
+}
+
+function setCover(url) {
+  const input = document.getElementById('coverUrl');
+  if (input) input.value = url || '';
+  updateCoverPreview(url || '');
 }
 
 /**
@@ -655,12 +863,17 @@ function toggleCategoryDropdown(event) {
   if (event) event.stopPropagation();
   const box = document.getElementById('categorySelect');
   if (!box) return;
-  box.classList.toggle('open');
+  const willOpen = !box.classList.contains('open');
+  if (willOpen) closeTagDropdown();
+  box.classList.toggle('open', willOpen);
+  if (willOpen) openFloatingDropdown('categorySelectTrigger', 'categorySelectMenu');
+  else closeFloatingDropdown('categorySelectMenu');
 }
 
 function closeCategoryDropdown() {
   const box = document.getElementById('categorySelect');
   if (box) box.classList.remove('open');
+  closeFloatingDropdown('categorySelectMenu');
 }
 
 function selectCategoryOption(el) {
@@ -809,20 +1022,21 @@ async function refreshTagList(checkedIds) {
     const res = await fetch('/admin/tags/list');
     const data = await res.json();
     if (data.ok) {
-      const group = document.querySelector('.checkbox-group');
-      if (!group) return;
+      const menu = document.getElementById('tagSelectMenu');
+      if (!menu) return;
       let html = '';
       data.tags.forEach((tag) => {
         const isChecked = checkedIds.includes(String(tag.id));
+        const safeName = String(tag.name).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         html += `
-                    <div class="checkbox-chip">
-                        <input type="checkbox" name="tagIds" form="articleForm"
-                            id="tag_${tag.id}" value="${tag.id}"
-                            ${isChecked ? 'checked' : ''}>
-                        <label for="tag_${tag.id}"># ${tag.name}</label>
-                    </div>`;
+          <label class="tag-option">
+            <input type="checkbox" name="tagIds" form="articleForm" id="tag_${tag.id}" value="${tag.id}" ${isChecked ? 'checked' : ''} onchange="updateTagSelectLabel()">
+            <span># ${safeName}</span>
+          </label>
+        `;
       });
-      group.innerHTML = html;
+      menu.innerHTML = html;
+      updateTagSelectLabel();
     }
   } catch (err) {
     console.error('Refresh tags failed', err);

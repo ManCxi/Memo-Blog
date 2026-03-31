@@ -360,9 +360,9 @@
 }
 .markdown-textarea {
   width: 100%;
-  min-height: 800px;
-  height: 800px;
-  resize: vertical;
+  min-height: 0;
+  height: 100%;
+  resize: none;
   border: none;
   border-radius: 0;
   background: var(--surface-1-bg);
@@ -380,6 +380,426 @@
 .article-summary-fixed {
   height: 120px;
   resize: none !important;
+}
+
+/* Drawer-based article settings (refactor) */
+.article-topbar {
+  position: static;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--border-radius-lg);
+  background: color-mix(in srgb, var(--surface-1-bg) 92%, transparent);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--surface-shadow-2);
+  flex-shrink: 0;
+}
+.article-topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.article-topbar-title {
+  flex: 1;
+  min-width: 240px;
+}
+.form-title-input-topbar {
+  font-size: 16px;
+  padding: 6px 0;
+}
+.article-topbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media (max-width: 720px) {
+  .article-topbar-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .article-topbar-title {
+    min-width: 0;
+  }
+  .article-topbar-actions {
+    justify-content: flex-start;
+  }
+}
+
+.article-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 9998;
+  visibility: hidden;
+}
+.article-drawer-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.article-settings-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  height: 100dvh;
+  width: min(420px, 92vw);
+  background: var(--surface-1-bg);
+  border-left: 1px solid var(--surface-border);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18);
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  visibility: hidden;
+  pointer-events: none;
+}
+.article-settings-drawer.is-open {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+.article-settings-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-1-bg);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.article-settings-drawer-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.article-settings-drawer-body {
+  padding: 14px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+  overscroll-behavior: contain;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px) + 18px);
+}
+
+/* Better layout inside settings drawer */
+.article-settings-drawer .article-sidebar-wrap {
+  gap: 10px;
+}
+.article-settings-drawer .form-section {
+  padding: 12px;
+  margin-bottom: 10px;
+  background: var(--surface-2-bg);
+  box-shadow: var(--surface-shadow-1);
+}
+.article-settings-drawer .form-section-title {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  font-size: 12px;
+}
+.article-settings-drawer .form-control {
+  background: var(--surface-1-bg);
+}
+.article-settings-drawer textarea.form-control {
+  line-height: 1.6;
+}
+
+/* Category + Tags UX improvements inside drawer */
+.article-settings-drawer .category-select-menu {
+  max-height: 320px;
+  overscroll-behavior: contain;
+}
+.article-settings-drawer .category-option {
+  padding: 10px 12px;
+}
+
+.article-settings-drawer .drawer-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.article-settings-drawer .drawer-section-head .form-section-title {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.compact-option-grid {
+  display: grid;
+  gap: 8px;
+}
+.compact-option-grid-1 {
+  grid-template-columns: 1fr;
+}
+.compact-option-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.compact-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-1-bg);
+  cursor: pointer;
+  min-width: 0;
+}
+.compact-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.compact-option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.compact-option:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--surface-border));
+}
+
+/* Tag multiselect dropdown */
+.tag-multiselect {
+  position: relative;
+  width: 100%;
+}
+.tag-multiselect-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--surface-border));
+  background: var(--surface-2-bg);
+}
+.tag-multiselect-trigger:hover {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--surface-border));
+  background: var(--surface-1-bg);
+}
+.tag-multiselect-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 1400;
+  background: var(--surface-1-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  box-shadow: var(--surface-shadow-2);
+  max-height: 320px;
+  overflow: auto;
+  display: none;
+  padding: 8px;
+  overscroll-behavior: contain;
+}
+.tag-multiselect.open .tag-multiselect-menu {
+  display: block;
+}
+
+/* Floating dropdown portal (category + tags) */
+.floating-dropdown {
+  position: fixed !important;
+  z-index: 20000 !important;
+  display: block !important;
+}
+
+/* Make floating dropdowns look nicer + scrollable */
+.floating-dropdown.category-select-menu,
+.floating-dropdown.tag-multiselect-menu {
+  max-height: min(360px, 55vh);
+  overflow: auto;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--surface-1-bg);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--surface-shadow-2);
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+.floating-dropdown.category-select-menu::-webkit-scrollbar,
+.floating-dropdown.tag-multiselect-menu::-webkit-scrollbar {
+  width: 6px;
+}
+.floating-dropdown.category-select-menu::-webkit-scrollbar-thumb,
+.floating-dropdown.tag-multiselect-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 99px;
+}
+
+.floating-dropdown.category-select-menu .category-option {
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.floating-dropdown.category-select-menu .category-option:hover {
+  background: var(--surface-hover);
+}
+.floating-dropdown.category-select-menu .category-option.active {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-1-bg));
+  color: var(--accent);
+}
+.tag-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.tag-option:hover {
+  background: var(--surface-hover);
+}
+.tag-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.tag-option span {
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.article-settings-open {
+  overflow: hidden;
+}
+
+/* Prevent horizontal scroll caused by off-canvas drawer */
+body:has(.article-form-root) {
+  overflow-x: clip;
+}
+@supports not (overflow-x: clip) {
+  body:has(.article-form-root) {
+    overflow-x: hidden;
+  }
+}
+
+/* Fallback: some environments don't support :has() reliably */
+body.article-form-page {
+  overflow-x: hidden;
+}
+
+/* In admin layout, the scroll container is usually .admin-content */
+body.article-form-page .admin-content {
+  overflow-x: hidden;
+}
+
+/* Make editor area fill the available page height */
+body.article-form-page .admin-content {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+body.article-form-page .admin-content > .animate-fade-in-up {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Same full-height editor behavior for page form */
+body.page-form-page .admin-content {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+body.page-form-page .admin-content > .animate-fade-in-up {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body.page-form-page .article-form-root,
+body.page-form-page .article-edit-layout,
+body.page-form-page .article-editor-wrap,
+body.page-form-page .editor-section,
+body.page-form-page .editor-container-wrap {
+  flex: 1;
+  min-height: 300px;
+}
+body.page-form-page #wang-editor-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 300px;
+}
+body.page-form-page #editor-toolbar {
+  flex-shrink: 0;
+}
+body.page-form-page #editor-container {
+  flex: 1;
+  min-height: 0;
+}
+
+/* WangEditor internal scroll container needs enough height (Page form) */
+body.page-form-page .w-e-scroll {
+  min-height: 300px;
+}
+body.article-form-page .article-form-root {
+  flex: 1;
+  min-height: 0;
+}
+body.article-form-page .article-edit-layout {
+  flex: 1;
+  min-height: 0;
+}
+body.article-form-page .article-editor-wrap,
+body.article-form-page .editor-section,
+body.article-form-page .editor-container-wrap {
+  flex: 1;
+  min-height: 300px;
+}
+
+/* WangEditor: toolbar fixed, content fills remaining height */
+body.article-form-page #wang-editor-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 300px;
+}
+body.article-form-page #editor-toolbar {
+  flex-shrink: 0;
+}
+body.article-form-page #editor-container {
+  flex: 1;
+  min-height: 0;
+}
+
+/* WangEditor internal scroll container needs enough height */
+body.article-form-page .w-e-scroll {
+  min-height: 300px;
+}
+
+/* FontAwesome: reduce blocking on slow network (local fonts) */
+@font-face {
+  font-family: 'FontAwesome';
+  font-style: normal;
+  font-weight: normal;
+  font-display: swap;
+  src:
+    url('/libs/font-awesome/fonts/fontawesome-webfont.woff2?v=4.7.0') format('woff2'),
+    url('/libs/font-awesome/fonts/fontawesome-webfont.woff?v=4.7.0') format('woff'),
+    url('/libs/font-awesome/fonts/fontawesome-webfont.ttf?v=4.7.0') format('truetype');
 }
 
 /* Form Title Big */
@@ -763,24 +1183,22 @@
 }
 .article-edit-layout {
   display: flex;
-  gap: 24px;
+  gap: 16px;
   flex: 1;
-  height: 100%;
-  min-height: calc(100vh - 120px);
+  min-height: 0;
 }
 .article-editor-wrap {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
   flex: 1;
   min-width: 0;
 }
 .article-sidebar-wrap {
-  width: 320px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  flex-shrink: 0;
 }
 
 .title-section {
@@ -816,6 +1234,63 @@
   width: 100%;
   height: auto;
   display: block;
+}
+
+/* Cover picker (drawer) */
+.cover-picker-box {
+  position: relative;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 35%, var(--surface-border));
+  background: color-mix(in srgb, var(--surface-1-bg) 92%, transparent);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.cover-picker-box:hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--surface-border));
+  background: color-mix(in srgb, var(--accent-tint) 45%, var(--surface-1-bg));
+  transform: translateY(-1px);
+}
+.cover-picker-box img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+}
+.cover-picker-hint {
+  text-align: center;
+  color: var(--text-tertiary);
+}
+.cover-picker-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.cover-picker-sub {
+  font-size: 12px;
+  margin-top: 4px;
+}
+.cover-picker-clear {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-1-bg);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cover-picker-clear:hover {
+  color: var(--admin-red);
+  border-color: color-mix(in srgb, var(--admin-red) 35%, var(--surface-border));
+  background: color-mix(in srgb, var(--admin-red-tint) 55%, var(--surface-1-bg));
 }
 
 .quick-add-btn {
@@ -920,9 +1395,26 @@
   color: var(--text-tertiary);
   transition: transform 0.15s ease;
   margin-left: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--surface-3-bg);
+  border: 1px solid var(--surface-border);
+  flex-shrink: 0;
 }
 .category-select.open .category-select-arrow {
   transform: rotate(180deg);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--surface-border));
+  background: color-mix(in srgb, var(--accent-tint) 45%, var(--surface-1-bg));
+}
+.category-select-trigger:hover .category-select-arrow,
+.tag-multiselect-trigger:hover .category-select-arrow {
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-3-bg) 65%, var(--surface-1-bg));
 }
 .category-select-menu {
   position: absolute;
@@ -965,7 +1457,10 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  height: 800px; /* Standardize height */
+  flex: 1;
+  min-height: 0;
+  /* WangEditor requires enough height for modal/hoverbar positioning */
+  min-height: 300px;
   border: 1px solid var(--surface-border);
   border-radius: 12px;
   overflow: hidden;
@@ -996,7 +1491,7 @@
 /* Ensure content is not cut off at the bottom and can be scrolled past */
 .w-e-text-container [data-slate-editor] {
   padding: 20px 30px 150px !important; /* Large bottom padding for comfort */
-  min-height: 800px;
+  min-height: 100%;
 }
 
 .w-e-toolbar {
@@ -1084,7 +1579,8 @@
 }
 
 .w-e-text-container {
-  height: 800px !important;
+  height: auto !important;
+  min-height: 100%;
 }
 [data-theme='dark'] .editor-container-wrap .w-e-text-container [data-slate-editor] pre > code {
   background: rgba(0, 0, 0, 0.35);
