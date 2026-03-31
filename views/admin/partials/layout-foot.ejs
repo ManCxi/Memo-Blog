@@ -261,16 +261,61 @@ async function compressImageBeforeUpload(file) {
 
 // ── 通用附件选择器 ──
 let _attachmentPickerCb = null;
+let _selectedAttachmentUrl = null;
+
 function openAttachmentPicker(cb, opts = {}) {
   _attachmentPickerCb = cb;
+  _selectedAttachmentUrl = null;
   const modal = document.getElementById('attachmentPicker');
   if (!modal) return;
   modal.style.display = 'flex';
+  
+  // 重置确认按钮状态
+  const confirmBtn = document.getElementById('confirmAttachmentBtn');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = '0.5';
+  }
+  
   loadAttachmentList(opts.accept || 'all');
 }
+
 function closeAttachmentPicker() {
   const modal = document.getElementById('attachmentPicker');
   if (modal) modal.style.display = 'none';
+}
+
+function handleAttachmentSelect(el, url) {
+  // 移除之前的所有选中状态
+  document.querySelectorAll('.media-grid-item').forEach(item => {
+    item.classList.remove('selected');
+  });
+  
+  // 选中当前项
+  el.classList.add('selected');
+  _selectedAttachmentUrl = url;
+  
+  // 启用确认按钮
+  const confirmBtn = document.getElementById('confirmAttachmentBtn');
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.style.opacity = '1';
+  }
+}
+
+function confirmAttachmentSelection() {
+  if (!_selectedAttachmentUrl) {
+    if (typeof showToast === 'function') showToast('请先选择一个文件', 'error');
+    return;
+  }
+  if (typeof _attachmentPickerCb === 'function') {
+    _attachmentPickerCb(_selectedAttachmentUrl);
+    closeAttachmentPicker();
+    if (typeof showToast === 'function') showToast('图片插入成功');
+  } else {
+    console.error('Attachment picker callback is not a function');
+    if (typeof showToast === 'function') showToast('配置错误，请刷新页面', 'error');
+  }
 }
 async function loadAttachmentList(type = 'all', keyword = '') {
   const grid = document.getElementById('attachmentPickerGrid');
@@ -284,7 +329,12 @@ async function loadAttachmentList(type = 'all', keyword = '') {
     const el = document.createElement('div');
     el.className = 'media-grid-item';
     el.style.cursor = 'pointer';
-    el.onclick = () => { if (_attachmentPickerCb) _attachmentPickerCb(it.path); closeAttachmentPicker(); };
+    el.onclick = () => handleAttachmentSelect(el, it.path);
+    // 双击直接确认
+    el.ondblclick = () => {
+      handleAttachmentSelect(el, it.path);
+      confirmAttachmentSelection();
+    };
     if (it.fileType === 'image') {
       const img = document.createElement('img');
       img.src = it.path; img.className = 'media-grid-thumb';
@@ -309,7 +359,11 @@ async function doAttachmentUpload(files) {
     const fd = new FormData(); fd.append('file', uploadFile);
     const r = await fetch('/admin/media/upload', { method: 'POST', body: fd });
     const d = await r.json();
-    if (d.ok && _attachmentPickerCb) { _attachmentPickerCb(d.url); closeAttachmentPicker(); }
+    if (d.ok && _attachmentPickerCb) { 
+      if (typeof showToast === 'function') showToast('上传成功');
+      _attachmentPickerCb(d.url); 
+      closeAttachmentPicker(); 
+    }
   }
   text.textContent = '';
 }
@@ -387,6 +441,7 @@ async function doAttachmentUpload(files) {
       <div id="attachmentUploadText" class="text-tertiary" style="margin-top:8px;font-size:12px;"></div>
     </div>
     <div class="modal-footer">
+      <button id="confirmAttachmentBtn" class="btn btn-primary" onclick="confirmAttachmentSelection()" disabled style="opacity: 0.5;">确认选择</button>
       <button class="btn btn-secondary" onclick="closeAttachmentPicker()">关闭</button>
     </div>
   </div>

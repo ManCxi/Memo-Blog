@@ -6,9 +6,11 @@ const { getSidebarData } = require('../services/sidebarService');
 
 const PAGE_SIZE = 10;
 
-function renderArticleContent(content) {
+function renderArticleContent(content, editorType) {
   const raw = String(content || '');
   if (!raw.trim()) return '';
+  if (editorType === 'markdown') return marked(raw);
+
   const hasRichHtml =
     /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(
       raw
@@ -50,8 +52,8 @@ exports.show = async (req, res) => {
       totalViews += 1;
     }
 
-    // 内容转 HTML（富文本直出，纯 Markdown 再解析）
-    const contentHtml = renderArticleContent(article.content);
+    // 内容转 HTML（优先根据 editorType，旧数据回退到启发式）
+    const contentHtml = renderArticleContent(article.content, article.editorType);
 
     // 上一篇/下一篇
     const { Op } = require('sequelize');

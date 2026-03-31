@@ -1,4 +1,4 @@
-const { Article, Category, Tag, Attachment } = require('../models');
+const { Article, Category, Tag, Attachment, User } = require('../models');
 const { cache } = require('../utils/cache');
 const slugify = require('slugify');
 const { getRelativeUploadPath } = require('../config/uploadsPath');
@@ -6,8 +6,20 @@ const path = require('path');
 const fs = require('fs');
 const { compressImageIfPossible } = require('../services/mediaService');
 const { sanitize } = require('../utils/sanitizer');
+const { marked } = require('marked');
 
 const PAGE_SIZE = 15;
+
+// Helper to render content (shared with public controller logic)
+function renderArticleContent(content, editorType) {
+  const raw = String(content || '');
+  if (!raw.trim()) return '';
+  if (editorType === 'markdown') return marked(raw);
+
+  const hasRichHtml = /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(raw);
+  if (hasRichHtml) return raw;
+  return marked(raw);
+}
 
 // compressImageIfPossible moved to services/mediaService.js
 
@@ -72,7 +84,7 @@ exports.createPage = async (req, res) => {
 // 新建文章保存
 exports.create = async (req, res) => {
   try {
-    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt } =
+    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt, editorType } =
       req.body;
     let uploadedCover = '';
     if (req.file) {
@@ -97,18 +109,19 @@ exports.create = async (req, res) => {
       finalStatus = status;
     }
 
-    const sanitizedContent = sanitize(content);
+    const sanitizedContent = editorType === 'markdown' ? content : sanitize(content);
     const article = await Article.create({
       title,
       slug,
       content: sanitizedContent,
-      summary: sanitize(summary) || sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, ''),
+      summary: sanitize(summary) || (editorType === 'markdown' ? content.slice(0, 200) : sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, '')),
       cover: cover || uploadedCover,
       CategoryId: CategoryId || null,
       UserId: req.session.user.id,
       status: finalStatus,
       pinned: pinned === 'on' || pinned === '1',
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
+      editorType: editorType || 'html',
     });
 
     // 关联标签
@@ -169,7 +182,7 @@ exports.update = async (req, res) => {
     const article = await Article.findByPk(req.params.id);
     if (!article) return res.status(404).send('文章不存在');
 
-    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt } =
+    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt, editorType } =
       req.body;
     let uploadedCover = '';
     if (req.file) {
@@ -185,15 +198,16 @@ exports.update = async (req, res) => {
       finalStatus = status;
     }
 
-    const sanitizedContent = sanitize(content);
+    const sanitizedContent = (editorType || article.editorType) === 'markdown' ? content : sanitize(content);
     const updateData = {
       title,
       content: sanitizedContent,
-      summary: sanitize(summary) || sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, ''),
+      summary: sanitize(summary) || ((editorType || article.editorType) === 'markdown' ? content.slice(0, 200) : sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, '')),
       cover: cover || uploadedCover || article.cover,
       CategoryId: CategoryId || null,
       status: finalStatus,
       pinned: pinned === 'on' || pinned === '1',
+      editorType: editorType || article.editorType,
     };
 
     if (publishedAt) {
@@ -265,5 +279,38 @@ exports.uploadImage = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.json({ success: false, message: '上传失败：' + err.message });
+  }
+};
+
+// 预览文章 (管理员专供)
+exports.preview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const article = await Article.findByPk(id, {
+      include: [
+        { association: 'category', attributes: ['id', 'name', 'slug'] },
+        { association: 'author', attributes: ['nickname', 'avatar'] },
+        { association: 'tags', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
+      ],
+    });
+    if (!article) return res.status(404).render('404', { title: '文章不存在' });
+
+    const contentHtml = renderArticleContent(article.content, article.editorType);
+    const { getSidebarData } = require('../services/sidebarService');
+    const sidebar = await getSidebarData();
+
+    res.render('article', {
+      title: '[预览] ' + article.title,
+      article,
+      contentHtml,
+      totalViews: article.views || 0,
+      prevArticle: null,
+      nextArticle: null,
+      sidebar,
+      isPreview: true
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).render('404', { title: '预览失败' });
   }
 };

@@ -79,14 +79,13 @@
       <a href="/" target="_blank" class="btn btn-secondary">🌐 返回前台</a>
     </div>
 
-    <!-- Recent articles -->
-    <div class="table-card">
+    <!-- Recent Published articles -->
+    <div class="table-card mb-20">
       <div class="table-card-header">
-        <span class="table-card-title">🕐 最新发布的文章</span>
-        <a href="/admin/articles" class="btn btn-secondary btn-sm">查看全部</a>
+        <span class="table-card-title">🚀 最近发布的文章</span>
+        <a href="/admin/articles?status=published" class="btn btn-secondary btn-sm">查看全部</a>
       </div>
 
-      <!-- Desktop table -->
       <div class="table-responsive-wrap">
         <div style="overflow-x:auto;">
           <table class="data-table">
@@ -94,20 +93,18 @@
               <tr>
                 <th style="width:38%">标题</th>
                 <th>分类</th>
-                <th>状态</th>
-                <th>阅读</th>
+                <th>阅读量</th>
                 <th>发布时间</th>
                 <th class="actions-col">操作</th>
               </tr>
             </thead>
             <tbody>
-              <% if (recentArticles.length===0) { %>
+              <% if (recentPublished.length===0) { %>
                 <tr>
-                  <td colspan="6" class="table-empty">暂无文章，<a href="/admin/articles/create"
-                      style="color:var(--accent);">去发布第一篇</a></td>
+                  <td colspan="5" class="table-empty">暂无已发布文章</td>
                 </tr>
                 <% } %>
-                  <% recentArticles.forEach(article=> { %>
+                  <% recentPublished.forEach(article=> { %>
                     <tr>
                       <td>
                         <a href="/article/<%= article.slug %>" target="_blank"
@@ -119,21 +116,12 @@
                       </td>
                       <td>
                         <% if (article.category) { %>
-                          <span class="status-badge badge-category">
-                            <%= article.category.name %>
-                          </span>
-                          <% } else { %>
-                            <span style="color:var(--text-tertiary);">—</span>
-                            <% } %>
+                          <span class="status-badge badge-category"><%= article.category.name %></span>
+                        <% } else { %>
+                          <span style="color:var(--text-tertiary);">—</span>
+                        <% } %>
                       </td>
-                      <td>
-                        <span
-                          class="status-badge <%= article.status === 'published' ? 'status-published' : 'status-draft' %>">
-                          <%= article.status==='published' ? '已发布' : '草稿' %>
-                        </span>
-                      </td>
-                      <td class="text-tertiary text-sm">👁 <%= (article.views || 0).toLocaleString() %>
-                      </td>
+                      <td class="text-tertiary text-sm">👁 <%= (article.views || 0).toLocaleString() %></td>
                       <td class="text-tertiary text-sm">
                         <%= new Date(article.publishedAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) %>
                       </td>
@@ -145,42 +133,60 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
 
-        <!-- Mobile card list -->
-        <div class="mobile-card-list">
-          <% if (recentArticles.length===0) { %>
-            <div class="table-empty">暂无文章，<a href="/admin/articles/create" style="color:var(--accent);">去发布第一篇</a></div>
-            <% } %>
-              <% recentArticles.forEach(article=> { %>
-                <div class="mobile-list-item">
-                  <div class="mobile-list-item-title">
-                    <% if (article.pinned) { %><span class="status-badge status-pinned"
-                        style="font-size:10px;">📌</span>
-                      <% } %>
-                        <a href="/article/<%= article.slug %>" target="_blank" style="color:var(--text-primary);">
+    <!-- Recent Drafts -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">📄 我的草稿箱</span>
+        <a href="/admin/articles?status=draft" class="btn btn-secondary btn-sm">查看全部</a>
+      </div>
+
+      <div class="table-responsive-wrap">
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:38%">标题</th>
+                <th>分类</th>
+                <th>上次修改</th>
+                <th class="actions-col">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (recentDrafts.length===0) { %>
+                <tr>
+                  <td colspan="4" class="table-empty">草稿箱空空如也，<a href="/admin/articles/create" style="color:var(--accent);">写点什么吧</a></td>
+                </tr>
+                <% } %>
+                  <% recentDrafts.forEach(article=> { %>
+                    <tr>
+                      <td>
+                        <a href="/admin/articles/<%= article.id %>/preview" target="_blank"
+                          style="font-weight:600;color:var(--text-primary);text-decoration:none;transition:color 0.15s;"
+                          onmouseover="this.style.color='var(--accent)'"
+                          onmouseout="this.style.color='var(--text-primary)'">
                           <%= article.title %>
                         </a>
-                  </div>
-                  <div class="mobile-list-item-meta">
-                    <% if (article.category) { %>
-                      <span class="status-badge badge-category">
-                        <%= article.category.name %>
-                      </span>
-                      <% } %>
-                        <span
-                          class="status-badge <%= article.status === 'published' ? 'status-published' : 'status-draft' %>">
-                          <%= article.status==='published' ? '已发布' : '草稿' %>
-                        </span>
-                        <span>👁 <%= (article.views || 0).toLocaleString() %></span>
-                        <span>
-                          <%= new Date(article.publishedAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) %>
-                        </span>
-                  </div>
-                  <div class="mobile-list-item-actions">
-                    <a href="/admin/articles/<%= article.id %>/edit" class="btn btn-edit btn-sm">✏️ 编辑</a>
-                  </div>
-                </div>
-                <% }) %>
+                      </td>
+                      <td>
+                        <% if (article.category) { %>
+                          <span class="status-badge badge-category"><%= article.category.name %></span>
+                        <% } else { %>
+                          <span style="color:var(--text-tertiary);">—</span>
+                        <% } %>
+                      </td>
+                      <td class="text-tertiary text-sm">
+                        <%= new Date(article.updatedAt || article.createdAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) %>
+                      </td>
+                      <td>
+                        <a href="/admin/articles/<%= article.id %>/edit" class="btn btn-edit btn-sm">✏️ 编辑</a>
+                      </td>
+                    </tr>
+                    <% }) %>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

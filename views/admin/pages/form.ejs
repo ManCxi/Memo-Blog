@@ -1,5 +1,6 @@
-<% const activePage = 'pages' %>
 <%- include('../partials/layout-head') %>
+<link rel="stylesheet" href="/libs/easymde/easymde.min.css">
+<script src="/libs/easymde/easymde.min.js"></script>
 
 <% if (typeof error !== 'undefined' && error) { %>
 <div class="flash flash-error">⚠️ <%= error %></div>
@@ -33,14 +34,34 @@
         <p class="settings-desc" style="margin-left: 28px;">页面 URL 将是：domain.com/p/your-slug</p>
       </div>
 
+      <!-- Editor Type Toggle -->
+      <div class="form-section" style="margin-bottom: 20px; flex-shrink: 0;">
+        <label class="form-label">编辑器模式</label>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <label class="checkbox-label-inline" style="margin: 0;">
+            <input type="radio" name="editorType" value="html" <%= !page || page.editorType === 'html' ? 'checked' : '' %> onchange="switchEditor('html')"> 富文本
+          </label>
+          <label class="checkbox-label-inline" style="margin: 0;">
+            <input type="radio" name="editorType" value="markdown" <%= page && page.editorType === 'markdown' ? 'checked' : '' %> onchange="switchEditor('markdown')"> Markdown
+          </label>
+          <button type="button" class="btn btn-secondary btn-sm <%= page && page.editorType === 'markdown' ? '' : 'd-none' %>" id="importMdBtn" onclick="triggerMdImport()">📥 导入 MD</button>
+          <input type="file" id="mdFileInput" style="display:none;" accept=".md" onchange="handleMdFile(this)">
+        </div>
+      </div>
+
       <!-- Editor -->
       <div class="form-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
         <div class="page-editor-wrap" style="width: 100%; display: flex; flex-direction: column; flex: 1; min-height: 0; border: 1px solid var(--surface-border); border-radius: 12px; overflow: hidden; background: var(--surface-1-bg); z-index: 10;">
-          <label class="form-label" style="flex-shrink: 0; padding: 10px 10px 0 10px; margin-bottom: 0;">页面内容 <span style="font-weight:400;color:var(--text-tertiary);">（Rich Text）</span></label>
-          <!-- 工具栏 -->
-          <div id="editor-toolbar" style="border-bottom: 1px solid var(--surface-border); background: var(--surface-3-bg);"></div>
-          <!-- 编辑区 -->
-          <div id="editor-container" style="overflow-y: hidden;"></div>
+          <label class="form-label" style="flex-shrink: 0; padding: 10px 10px 0 10px; margin-bottom: 0;">页面内容</label>
+          <div id="wang-editor-area" class="<%= page && page.editorType === 'markdown' ? 'd-none' : '' %>">
+            <!-- 工具栏 -->
+            <div id="editor-toolbar" style="border-bottom: 1px solid var(--surface-border); background: var(--surface-3-bg);"></div>
+            <!-- 编辑区 -->
+            <div id="editor-container" class="editor-content-area"></div>
+          </div>
+          <div id="markdown-editor-area" class="<%= !page || page.editorType === 'html' ? 'd-none' : '' %>">
+            <textarea id="markdown-editor" class="markdown-textarea"></textarea>
+          </div>
           <!-- 隐藏的 textarea 用于提交表单 -->
           <textarea id="hiddenContent" name="content" style="display:none;"><%= page ? page.content : '' %></textarea>
         </div>
@@ -53,8 +74,31 @@
       <div class="form-section">
         <div class="form-section-title">操作</div>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <button type="submit" class="btn btn-primary" style="justify-content:center;">
-            🚀 <%= page && page.id ? '保存修改' : '发布页面' %>
+          <%
+            let btn1Text = '🚀 发布页面';
+            let btn1Status = 'published';
+            let btn2Text = '📄 设为隐藏';
+            let btn2Status = 'hidden';
+
+            if (page && page.id) {
+              if (page.status === 'published') {
+                btn1Text = '💾 保存修改';
+                btn1Status = 'published';
+                btn2Text = '📄 设为隐藏';
+                btn2Status = 'hidden';
+              } else {
+                btn1Text = '💾 保存修改';
+                btn1Status = 'hidden';
+                btn2Text = '🚀 发布页面';
+                btn2Status = 'published';
+              }
+            }
+          %>
+          <button type="submit" name="status" value="<%= btn1Status %>" class="btn btn-primary" style="justify-content:center;">
+            <%= btn1Text %>
+          </button>
+          <button type="submit" name="status" value="<%= btn2Status %>" class="btn btn-secondary" style="justify-content:center;">
+            <%= btn2Text %>
           </button>
           <a href="/admin/pages" class="btn btn-secondary" style="justify-content:center;">✕ 取消</a>
         </div>
@@ -63,13 +107,6 @@
       <!-- Publish settings -->
       <div class="form-section">
         <div class="form-section-title">显示设置</div>
-        <div class="form-mb">
-          <label class="form-label">发布状态</label>
-          <select name="status" class="form-control form-control-sm">
-            <option value="published" <%= !page || page.status === 'published' ? 'selected' : '' %>>✅ 显示</option>
-            <option value="hidden" <%= page && page.status === 'hidden' ? 'selected' : '' %>>📄 隐藏</option>
-          </select>
-        </div>
       </div>
     </div>
   </div>
@@ -77,8 +114,10 @@
 
 <style>
 #editor-container {
-  min-height: 460px;
-  height: 460px;
+  min-height: 800px;
+}
+.w-e-text-container {
+  height: 800px !important;
 }
 [data-theme='dark'] #pageForm .page-editor-wrap {
   --w-e-textarea-bg-color: var(--surface-1-bg);
@@ -111,8 +150,262 @@
 }
 </style>
 
+<script src="/libs/marked/marked.min.js"></script>
+<script src="/libs/turndown/turndown.js"></script>
 <script>
+let easyMDE = null;
+
+function refreshMarkdownEditorViewport() {
+  if (!easyMDE || !easyMDE.codemirror) return;
+  const cm = easyMDE.codemirror;
+  if (typeof cm.setSize === 'function') cm.setSize(null, '100%');
+  if (typeof cm.getWrapperElement === 'function') {
+    const wrapper = cm.getWrapperElement();
+    if (wrapper) {
+      wrapper.style.height = '100%';
+      wrapper.style.minHeight = '0';
+    }
+  }
+  if (typeof cm.getScrollerElement === 'function') {
+    const scroller = cm.getScrollerElement();
+    if (scroller) {
+      scroller.style.maxHeight = '100%';
+      scroller.style.overflowY = 'auto';
+      scroller.style.overflowX = 'auto';
+    }
+  }
+  if (typeof cm.refresh === 'function') cm.refresh();
+}
+
+function syncEasyMDEFullscreenState(targetEditor) {
+  const editor = targetEditor || easyMDE;
+  if (!editor || !editor.codemirror) return;
+  const cm = editor.codemirror;
+  let isFullscreen = false;
+  if (typeof cm.isFullScreen === 'function') {
+    isFullscreen = !!cm.isFullScreen();
+  } else if (typeof cm.getWrapperElement === 'function') {
+    const wrapper = cm.getWrapperElement();
+    isFullscreen = !!(wrapper && wrapper.classList.contains('CodeMirror-fullscreen'));
+  }
+  document.body.classList.toggle('editor-is-fullscreen', isFullscreen);
+}
+
+function initMarkdownEditor() {
+  const textarea = document.getElementById('markdown-editor');
+  if (!textarea) return;
+
+  const hiddenContent = document.getElementById('hiddenContent');
+  easyMDE = new EasyMDE({
+    element: textarea,
+    autoDownloadFontAwesome: true,
+    spellChecker: false,
+    placeholder: '在此输入 Markdown 内容...',
+    status: false,
+    autosave: { enabled: false },
+    renderingConfig: {
+      singleLineBreaks: false,
+      codeSyntaxHighlighting: true,
+    },
+    initialValue: hiddenContent ? hiddenContent.value : '',
+    minHeight: 'auto',
+    toolbar: [
+      { name: "bold", action: EasyMDE.toggleBold, className: "fa fa-bold", title: "加粗 (Ctrl-B)" },
+      { name: "italic", action: EasyMDE.toggleItalic, className: "fa fa-italic", title: "斜体 (Ctrl-I)" },
+      { name: "heading", action: EasyMDE.toggleHeadingSmaller, className: "fa fa-header", title: "标题 (Ctrl-H)" },
+      "|",
+      { name: "quote", action: EasyMDE.toggleBlockquote, className: "fa fa-quote-left", title: "引用 (Ctrl-')" },
+      { name: "unordered-list", action: EasyMDE.toggleUnorderedList, className: "fa fa-list-ul", title: "无序列表 (Ctrl-L)" },
+      { name: "ordered-list", action: EasyMDE.toggleOrderedList, className: "fa fa-list-ol", title: "有序列表 (Ctrl-Alt-L)" },
+      "|",
+      { name: "link", action: EasyMDE.drawLink, className: "fa fa-link", title: "创建链接 (Ctrl-K)" },
+      { 
+        name: "image", 
+        action: function(editor) {
+          if (typeof window.openAttachmentPicker === 'function') {
+          window.openAttachmentPicker(function(targetUrl) {
+            const targetEditor = editor || window.easyMDE;
+            if (!targetEditor || !targetEditor.codemirror) {
+              console.error('EasyMDE instance not found for insertion (Page)');
+              return;
+            }
+            // Ensure editor is focused
+            targetEditor.codemirror.focus();
+            // Format URL
+            const imageUrl = targetUrl.startsWith('http') || targetUrl.startsWith('/') ? targetUrl : '/' + targetUrl;
+            // Insert at cursor using the underlying CodeMirror instance
+            targetEditor.codemirror.replaceSelection(`![图片描述](${imageUrl})`);
+            // Refresh to sync value
+            targetEditor.codemirror.refresh();
+          }, { accept: 'image' });
+          } else {
+            // Fallback to default if picker not found
+            EasyMDE.drawImage(editor);
+          }
+        }, 
+        className: "fa fa-picture-o", 
+        title: "插入媒体库图片 (Ctrl-Alt-I)" 
+      },
+      { name: "table", action: EasyMDE.drawTable, className: "fa fa-table", title: "插入表格" },
+      "|",
+      { name: "preview", action: EasyMDE.togglePreview, className: "fa fa-eye no-disable", title: "实时预览 (Ctrl-P)" },
+      { name: "side-by-side", action: EasyMDE.toggleSideBySide, className: "fa fa-columns no-disable no-mobile", title: "分栏预览 (F9)" },
+      {
+        name: "fullscreen",
+        action(editor) {
+          EasyMDE.toggleFullScreen(editor);
+          setTimeout(() => syncEasyMDEFullscreenState(editor || easyMDE), 0);
+        },
+        className: "fa fa-arrows-alt no-disable no-mobile",
+        title: "全屏模式 (F11)"
+      },
+      "|",
+      { name: "guide", action: "https://www.markdownguide.org/basic-syntax/", className: "fa fa-question-circle", title: "Markdown 指南" }
+    ],
+  });
+
+  if (easyMDE && easyMDE.codemirror && typeof easyMDE.codemirror.on === 'function') {
+    easyMDE.codemirror.on('keydown', (_, event) => {
+      if (event && (event.key === 'F11' || event.key === 'Escape')) {
+        setTimeout(() => syncEasyMDEFullscreenState(easyMDE), 0);
+      }
+    });
+  }
+
+  easyMDE.codemirror.on('change', () => {
+    if (getEditorType() === 'markdown' && hiddenContent) {
+      hiddenContent.value = easyMDE.value();
+    }
+  });
+  setTimeout(refreshMarkdownEditorViewport, 100);
+}
+
+function getEditorType() {
+  const selected = document.querySelector('input[name="editorType"]:checked');
+  return selected ? selected.value : 'html';
+}
+
+function switchEditor(type) {
+  const wangArea = document.getElementById('wang-editor-area');
+  const mdArea = document.getElementById('markdown-editor-area');
+  const importBtn = document.getElementById('importMdBtn');
+  const hiddenContent = document.getElementById('hiddenContent');
+
+  // Determine previous type based on visibility
+  const prevType = (wangArea && wangArea.classList.contains('d-none')) ? 'markdown' : 'html';
+  if (type === prevType) return;
+
+  // 1. Sync current content to hiddenContent
+  if (prevType === 'html' && window.editor) {
+    hiddenContent.value = window.editor.getHtml();
+  } else if (prevType === 'markdown') {
+    hiddenContent.value = easyMDE ? easyMDE.value() : document.getElementById('markdown-editor').value;
+  }
+
+  // 2. Perform Conversion
+  if (type === 'markdown' && prevType === 'html') {
+    const TurndownService = window.TurndownService || window.Turndown;
+    if (TurndownService) {
+      const turndownService = new TurndownService({
+        headingStyle: 'atx',
+        hr: '---',
+        bulletListMarker: '-',
+        codeBlockStyle: 'fenced'
+      });
+
+      // Code block rule
+      turndownService.addRule('codeblock', {
+        filter: 'pre',
+        replacement: function (content, node) {
+          const codeElem = node.querySelector('code');
+          const code = codeElem ? (codeElem.innerText || codeElem.textContent) : (node.innerText || node.textContent);
+          let lang = '';
+          if (codeElem) {
+            const cls = codeElem.className || '';
+            const match = cls.match(/language-(\w+)/);
+            if (match) lang = match[1];
+          }
+          return '\n\n```' + lang + '\n' + code.trim() + '\n```\n\n';
+        }
+      });
+
+      // Headings rule
+      turndownService.addRule('headings', {
+        filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+        replacement: function (content, node) {
+          const level = node.nodeName.charAt(1);
+          return '\n\n' + '#'.repeat(level) + ' ' + content.trim() + '\n\n';
+        }
+      });
+
+      // Prepare HTML for Turndown
+      let rawHtml = hiddenContent.value.replace(/&nbsp;/g, ' ');
+      if (rawHtml.includes('&lt;') && !rawHtml.includes('<')) {
+        const decoder = document.createElement('div');
+        decoder.innerHTML = rawHtml;
+        rawHtml = decoder.textContent;
+      }
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(rawHtml, 'text/html');
+      
+      let markdown = turndownService.turndown(doc.body);
+      markdown = markdown.replace(/\n{3,}/g, '\n\n').trim();
+      hiddenContent.value = markdown;
+    }
+  } else if (type === 'html' && prevType === 'markdown') {
+    const Marked = window.marked;
+    if (Marked) {
+      const markdown = hiddenContent.value;
+      const html = Marked.parse ? Marked.parse(markdown) : (typeof Marked === 'function' ? Marked(markdown) : markdown);
+      hiddenContent.value = html.trim();
+    }
+  }
+
+  // 3. UI Toggle and Final Sync
+  if (type === 'markdown') {
+    if (wangArea) wangArea.classList.add('d-none');
+    if (mdArea) mdArea.classList.remove('d-none');
+    if (importBtn) importBtn.classList.remove('d-none');
+    if (easyMDE) {
+      easyMDE.value(hiddenContent.value);
+      setTimeout(refreshMarkdownEditorViewport, 0);
+    }
+    else {
+      const ta = document.getElementById('markdown-editor');
+      if (ta) ta.value = hiddenContent.value;
+    }
+  } else {
+    if (wangArea) wangArea.classList.remove('d-none');
+    if (mdArea) mdArea.classList.add('d-none');
+    if (importBtn) importBtn.classList.add('d-none');
+    if (window.editor) window.editor.setHtml(hiddenContent.value);
+  }
+}
+
+
+function triggerMdImport() {
+  document.getElementById('mdFileInput').click();
+}
+
+function handleMdFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const content = e.target.result;
+    if (easyMDE) {
+      easyMDE.value(content);
+      const hiddenContent = document.getElementById('hiddenContent');
+      if (hiddenContent) hiddenContent.value = content;
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initMarkdownEditor();
   setTimeout(() => {
     if (!window.wangEditor) return;
     const { createEditor, createToolbar } = window.wangEditor;
@@ -140,27 +433,75 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
+    const initialContent = document.getElementById('hiddenContent').value || '';
     const editor = createEditor({
       selector: '#editor-container',
-      html: document.getElementById('hiddenContent').value || '',
+      html: initialContent,
       config: editorConfig,
       mode: 'default',
     });
 
     editor.on('change', () => {
-      document.getElementById('hiddenContent').value = editor.getHtml();
+      if (getEditorType() === 'html') {
+        document.getElementById('hiddenContent').value = editor.getHtml();
+      }
     });
+
+    // Register custom media library menu for WangEditor
+    const { Boot } = window.wangEditor;
+    class MediaLibraryMenu {
+      constructor() {
+        this.title = '从媒体库选择';
+        this.iconSvg = '<svg viewBox="0 0 1024 1024"><path d="M928 160H96c-17.7 0-32 14.3-32 32v640c0 17.7 14.3 32 32 32h832c17.7 0 32-14.3 32-32V192c0-17.7-14.3-32-32-32zM153.8 809.1l170.9-204 90.9 90.9L642.7 444l227.5 315.1H153.8zM736 384c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80z"></path></svg>';
+        this.tag = 'button';
+      }
+      getValue(editor) { return ''; }
+      isActive(editor) { return false; }
+      isDisabled(editor) { return false; }
+      exec(editor, value) {
+        if (typeof window.openAttachmentPicker === 'function') {
+          window.openAttachmentPicker(url => {
+            editor.restoreSelection();
+            editor.insertNode({
+              type: 'image',
+              src: url,
+              alt: '图片',
+              style: { width: '100%' },
+              children: [{ text: '' }]
+            });
+          }, { accept: 'image' });
+        } else {
+          alert('媒体库组件未加载');
+        }
+      }
+    }
+    try {
+      Boot.registerMenu({
+        key: 'mediaLibrary',
+        factory() { return new MediaLibraryMenu(); }
+      });
+    } catch (e) {}
 
     createToolbar({
       editor,
       selector: '#editor-toolbar',
+      config: {
+        insertKeys: {
+          index: 23,
+          keys: ['mediaLibrary']
+        }
+      },
       mode: 'default',
     });
 
     window.editor = editor;
 
     document.getElementById('pageForm').addEventListener('submit', function() {
-      document.getElementById('hiddenContent').value = editor.getHtml();
+      if (getEditorType() === 'markdown' && easyMDE) {
+        document.getElementById('hiddenContent').value = easyMDE.value();
+      } else if (getEditorType() === 'html' && editor) {
+        document.getElementById('hiddenContent').value = editor.getHtml();
+      }
     });
   }, 100);
 });

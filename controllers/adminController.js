@@ -79,13 +79,24 @@ exports.dashboard = async (req, res) => {
       }
     }
 
-    const recentArticles = await Article.findAll({
-      order: [['createdAt', 'DESC']],
-      limit: 5,
-      include: [{ association: 'category', attributes: ['name'] }],
-    });
+    const [recentPublished, recentDrafts] = await Promise.all([
+      Article.findAll({
+        where: { status: 'published' },
+        order: [['publishedAt', 'DESC']],
+        limit: 5,
+        include: [{ association: 'category', attributes: ['name'] }],
+      }),
+      Article.findAll({
+        where: { status: 'draft' },
+        order: [['updatedAt', 'DESC']],
+        limit: 5,
+        include: [{ association: 'category', attributes: ['name'] }],
+      })
+    ]);
+
     // 填充实时阅读量
-    await cache.fillViews(recentArticles);
+    await cache.fillViews(recentPublished);
+    await cache.fillViews(recentDrafts);
 
     res.render('admin/dashboard', {
       title: '仪表盘',
@@ -98,7 +109,8 @@ exports.dashboard = async (req, res) => {
         pageCount,
         totalPv,
       },
-      recentArticles,
+      recentPublished,
+      recentDrafts,
     });
   } catch (err) {
     console.error(err);

@@ -1,6 +1,8 @@
 <% const activePage='articles' %>
   <%- include('../partials/layout-head') %>
     <link rel="stylesheet" href="/libs/air-datepicker/air-datepicker.css">
+    <link rel="stylesheet" href="/libs/easymde/easymde.min.css">
+    <script src="/libs/easymde/easymde.min.js"></script>
 
     <% if (typeof error !=='undefined' && error) { %>
       <div class="flash flash-error">⚠️ <%= error %></div>
@@ -28,14 +30,32 @@
                 placeholder="简短描述文章内容（可选，不填则自动截取正文）"><%= article ? article.summary : '' %></textarea>
             </div>
 
+            <div class="form-mb">
+              <label class="form-label">编辑器模式</label>
+              <div class="d-flex align-items-center gap-16">
+                <label class="checkbox-label-inline m-0">
+                  <input type="radio" name="editorType" value="html" <%= !article || article.editorType === 'html' ? 'checked' : '' %> onchange="switchEditor('html')"> 富文本
+                </label>
+                <label class="checkbox-label-inline m-0">
+                  <input type="radio" name="editorType" value="markdown" <%= article && article.editorType === 'markdown' ? 'checked' : '' %> onchange="switchEditor('markdown')"> Markdown
+                </label>
+                <button type="button" class="btn btn-secondary btn-sm <%= article && article.editorType === 'markdown' ? '' : 'd-none' %>" id="importMdBtn" onclick="triggerMdImport()">📥 导入 MD</button>
+                <input type="file" id="mdFileInput" style="display:none;" accept=".md" onchange="handleMdFile(this)">
+              </div>
+            </div>
+
             <!-- Editor -->
             <div class="editor-container-wrap">
-              <label class="form-label editor-inner-label">文章内容
-                <span class="text-tertiary">（Rich Text）</span></label>
-              <!-- 工具栏 -->
-              <div id="editor-toolbar" class="editor-toolbar-wrap"></div>
-              <!-- 编辑区 -->
-              <div id="editor-container" class="editor-content-area"></div>
+              <label class="form-label editor-inner-label">文章内容</label>
+              <div id="wang-editor-area" class="<%= article && article.editorType === 'markdown' ? 'd-none' : '' %>">
+                <!-- 工具栏 -->
+                <div id="editor-toolbar" class="editor-toolbar-wrap"></div>
+                <!-- 编辑区 -->
+                <div id="editor-container" class="editor-content-area"></div>
+              </div>
+              <div id="markdown-editor-area" class="<%= !article || article.editorType === 'html' ? 'd-none' : '' %>">
+                <textarea id="markdown-editor" class="markdown-textarea"></textarea>
+              </div>
               <!-- 隐藏的 textarea 用于提交表单 -->
               <textarea id="hiddenContent" name="content" style="display:none;"><%= article ? article.content : '' %></textarea>
             </div>
@@ -48,11 +68,31 @@
           <div class="form-section">
             <div class="form-section-title">操作</div>
             <div class="d-flex gap-8 flex-wrap">
-              <button type="submit" class="btn btn-primary flex-1 justify-center">
-                🚀 <%= article && article.id ? '保存修改' : '发布文章' %>
+              <%
+                let btn1Text = '🚀 发布文章';
+                let btn1Status = 'published';
+                let btn2Text = '💾 存为草稿';
+                let btn2Status = 'draft';
+
+                if (article && article.id) {
+                  if (article.status === 'published') {
+                    btn1Text = '💾 保存修改';
+                    btn1Status = 'published';
+                    btn2Text = '📄 撤回草稿';
+                    btn2Status = 'draft';
+                  } else {
+                    btn1Text = '💾 保存修改';
+                    btn1Status = 'draft';
+                    btn2Text = '🚀 发布文章';
+                    btn2Status = 'published';
+                  }
+                }
+              %>
+              <button type="submit" name="status" value="<%= btn1Status %>" class="btn btn-primary flex-1 justify-center">
+                <%= btn1Text %>
               </button>
-              <button type="submit" name="status" value="draft" class="btn btn-secondary flex-1 justify-center">
-                💾 草稿
+              <button type="submit" name="status" value="<%= btn2Status %>" class="btn btn-secondary flex-1 justify-center">
+                <%= btn2Text %>
               </button>
             </div>
             <div class="d-flex gap-8 mt-16 flex-wrap">
@@ -64,13 +104,6 @@
           <!-- Publish settings -->
           <div class="form-section">
             <div class="form-section-title">发布设置</div>
-            <div class="form-mb">
-              <label class="form-label">发布状态</label>
-              <select name="status" form="articleForm" class="form-control form-control-sm">
-                <option value="published" <%=!article || article.status==='published' ? 'selected' : '' %>>✅ 已发布</option>
-                <option value="draft" <%=article && article.status==='draft' ? 'selected' : '' %>>📄 草稿</option>
-              </select>
-            </div>
             <div class="form-mb">
               <label class="form-label">发布时间</label>
               <%
@@ -150,6 +183,8 @@
       </div>
     </form>
 
+    <script src="/libs/marked/marked.min.js"></script>
+    <script src="/libs/turndown/turndown.js"></script>
     <script src="/libs/air-datepicker/air-datepicker.js"></script>
     <script src="/js/admin/article-form.js"></script>
 

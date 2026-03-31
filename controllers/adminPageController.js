@@ -48,7 +48,7 @@ exports.createPage = (req, res) => {
 // 新建页面保存
 exports.create = async (req, res) => {
   try {
-    let { title, slug, content, status } = req.body;
+    let { title, slug, content, status, editorType } = req.body;
 
     if (!slug) {
       slug = slugify(title, { lower: true, strict: true });
@@ -68,7 +68,8 @@ exports.create = async (req, res) => {
       });
     }
 
-    await Page.create({ title, slug, content: sanitize(content), status });
+    const sanitizedContent = editorType === 'markdown' ? content : sanitize(content);
+    await Page.create({ title, slug, content: sanitizedContent, status, editorType: editorType || 'html' });
     res.redirect('/admin/pages');
   } catch (err) {
     console.error(err);
@@ -104,7 +105,7 @@ exports.update = async (req, res) => {
     const page = await Page.findByPk(req.params.id);
     if (!page) return res.status(404).send('页面不存在');
 
-    let { title, slug, content, status } = req.body;
+    let { title, slug, content, status, editorType } = req.body;
 
     // 检查 slug 唯一性（排除自身）
     const { Op } = require('sequelize');
@@ -123,7 +124,8 @@ exports.update = async (req, res) => {
       });
     }
 
-    await page.update({ title, slug, content: sanitize(content), status });
+    const sanitizedContent = (editorType || page.editorType) === 'markdown' ? content : sanitize(content);
+    await page.update({ title, slug, content: sanitizedContent, status, editorType: editorType || page.editorType });
     res.redirect('/admin/pages');
   } catch (err) {
     console.error(err);

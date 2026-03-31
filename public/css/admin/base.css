@@ -171,3 +171,6 @@ button {
   color: var(--text-tertiary);
   font-weight: 400;
 }
+.d-none {
+  display: none !important;
+}

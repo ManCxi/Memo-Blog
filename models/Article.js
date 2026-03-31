@@ -20,6 +20,11 @@ const Article = sequelize.define(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+    editorType: {
+      type: DataTypes.ENUM('html', 'markdown'),
+      defaultValue: 'html',
+      allowNull: false,
+    },
   },
   {
     tableName: 'Articles',

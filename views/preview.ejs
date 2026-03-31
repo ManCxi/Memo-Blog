@@ -83,12 +83,13 @@
 <%- include('partials/footer') %>
 
 <script src="/libs/dompurify/purify.min.js"></script>
+<script src="/libs/marked/marked.min.js"></script>
 <script>
 // ── 实时预览监听 ──
 window.addEventListener('message', async (event) => {
   if (!event.data || event.data.type !== 'PREVIEW_ARTICLE') return;
   
-  const { title, content, cover, categoryName, tagNames, pinned } = event.data;
+  const { title, content, editorType, cover, categoryName, tagNames, pinned } = event.data;
   
   // 1. 更新标题
   const displayTitle = title || '无标题文章';
@@ -115,7 +116,11 @@ window.addEventListener('message', async (event) => {
 
   // 4. 更新正文
   const articleContent = document.getElementById('articleContent');
-  let cleanHtml = DOMPurify.sanitize(content || '', {
+  let finalContent = content || '';
+  if (editorType === 'markdown' && typeof marked !== 'undefined') {
+    finalContent = marked.parse(finalContent);
+  }
+  let cleanHtml = DOMPurify.sanitize(finalContent, {
     ADD_TAGS: ['iframe', 'style', 'script'],
     ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
   });

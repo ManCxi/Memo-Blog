@@ -1,6 +1,7 @@
 const { Page, Category, Tag, Article } = require('../models');
 const { cache, CACHE_EXPIRES } = require('../utils/cache');
 const { sanitize } = require('../utils/sanitizer');
+const { marked } = require('marked');
 const { getSidebarData } = require('../services/sidebarService');
 
 exports.show = async (req, res) => {
@@ -21,10 +22,17 @@ exports.show = async (req, res) => {
     // 获取侧边栏
     const sidebar = await getSidebarData();
 
+    // 获取内容解析结果
+    let contentHtml = page.content;
+    if (page.editorType === 'markdown') {
+      contentHtml = marked(page.content);
+    }
+    contentHtml = sanitize(contentHtml);
+
     res.render('page', {
       title: page.title,
       page,
-      contentHtml: sanitize(page.content), // Add sanitization as 2nd layer defense
+      contentHtml,
       totalViews,
       sidebar,
     });

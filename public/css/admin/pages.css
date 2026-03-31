@@ -317,6 +317,62 @@
   width: 100%;
   flex-shrink: 0;
 }
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-3-bg);
+  align-items: center;
+  min-height: 42px;
+  flex-shrink: 0;
+}
+.md-toolbar-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+}
+.md-toolbar-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+.md-toolbar-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+.md-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--surface-border);
+  margin: 0 4px;
+}
+.markdown-textarea {
+  width: 100%;
+  min-height: 800px;
+  height: 800px;
+  resize: vertical;
+  border: none;
+  border-radius: 0;
+  background: var(--surface-1-bg);
+  color: var(--text-primary);
+  padding: 16px;
+  font-size: 15px;
+  line-height: 1.8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  outline: none;
+}
 .article-editor-wrap {
   flex: 1;
   min-width: 0;
@@ -508,6 +564,12 @@
   border-color: var(--accent);
   transform: translateY(-2px);
   box-shadow: var(--surface-shadow-2);
+}
+.media-grid-item.selected {
+  border-color: var(--accent) !important;
+  background: var(--surface-1-bg) !important;
+  box-shadow: 0 0 0 4px var(--accent-tint) !important;
+  transform: translateY(-2px);
 }
 .media-grid-thumb {
   width: 100%;
@@ -903,12 +965,13 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  height: 900px;
+  height: 800px; /* Standardize height */
   border: 1px solid var(--surface-border);
   border-radius: 12px;
   overflow: hidden;
   background: var(--surface-1-bg);
   z-index: 10;
+  position: relative;
 }
 .editor-toolbar-wrap {
   border-bottom: 1px solid var(--surface-border);
@@ -916,7 +979,91 @@
 }
 .editor-content-area {
   flex: 1;
-  overflow-y: hidden;
+  overflow-y: auto !important;
+  background: var(--surface-1-bg);
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* WangEditor internal container stabilization */
+.w-e-text-container {
+  height: auto !important;
+  min-height: 100%;
+  border: none !important;
+  background: var(--surface-1-bg);
+}
+
+/* Ensure content is not cut off at the bottom and can be scrolled past */
+.w-e-text-container [data-slate-editor] {
+  padding: 20px 30px 150px !important; /* Large bottom padding for comfort */
+  min-height: 800px;
+}
+
+.w-e-toolbar {
+  border-bottom: 1px solid var(--surface-border) !important;
+}
+
+/* EasyMDE container stabilization */
+#markdown-editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+#markdown-editor-area.d-none {
+  display: none !important;
+}
+.EasyMDEContainer {
+  flex: 1;
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.EasyMDEContainer {
+  display: flex !important;
+  flex-direction: column;
+  background: transparent;
+  border: none !important;
+  height: 100%;
+  min-height: 0;
+}
+
+.EasyMDEContainer .editor-toolbar {
+  flex-shrink: 0;
+  border: none;
+  border-bottom: 1px solid var(--surface-border);
+  border-radius: 0;
+  background: var(--surface-2-bg);
+}
+
+.CodeMirror {
+  display: block;
+  border: none !important;
+  background: transparent !important;
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+.CodeMirror-scroll {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  min-height: 0;
+}
+
+.CodeMirror-lines {
+  padding-bottom: 200px !important;
+}
+
+.CodeMirror-lines {
+  padding-bottom: 200px !important;
 }
 [data-theme='dark'] .editor-container-wrap {
   --w-e-textarea-bg-color: var(--surface-1-bg);
@@ -935,11 +1082,201 @@
   --w-e-modal-button-bg-color: var(--surface-2-bg);
   --w-e-modal-button-border-color: var(--surface-border);
 }
+
+.w-e-text-container {
+  height: 800px !important;
+}
 [data-theme='dark'] .editor-container-wrap .w-e-text-container [data-slate-editor] pre > code {
   background: rgba(0, 0, 0, 0.35);
 }
 [data-theme='dark'] .editor-container-wrap .w-e-text-placeholder {
   color: var(--text-tertiary);
+}
+
+/* EasyMDE / CodeMirror Dark Theme & Beautification */
+.CodeMirror {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji" !important;
+  font-size: 16px !important;
+  line-height: 1.7 !important;
+  color: var(--text-primary) !important;
+  background: var(--surface-1-bg) !important;
+  border: none !important;
+  height: 100% !important;
+  transition: background 0.3s, color 0.3s;
+}
+
+[data-theme='dark'] .CodeMirror {
+  background: var(--surface-1-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+.CodeMirror-lines {
+  padding: 24px 12px !important; /* Proper padding for text */
+}
+
+.CodeMirror-vscrollbar, .CodeMirror-hscrollbar {
+  z-index: 100 !important; /* Ensure scrollbars are visible */
+}
+
+[data-theme='dark'] .CodeMirror-cursor {
+  border-left: 1px solid var(--text-primary) !important;
+}
+
+[data-theme='dark'] .CodeMirror-selected {
+  background: rgba(255, 107, 53, 0.2) !important;
+}
+
+.editor-toolbar {
+  background: var(--surface-3-bg) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--surface-border) !important;
+  opacity: 1; /* Must be fully opaque to prevent content bleed-through in fullscreen */
+  padding: 8px 12px !important;
+}
+
+/* ------------------------------------------------------------
+   Global Fullscreen Editor Overrides (Breaking out of Layout)
+   ------------------------------------------------------------ */
+body.editor-is-fullscreen {
+  overflow: hidden !important;
+}
+
+body.editor-is-fullscreen .admin-sidebar,
+body.editor-is-fullscreen .admin-header,
+body.editor-is-fullscreen .sidebar-overlay {
+  display: none !important;
+}
+
+body.editor-is-fullscreen .admin-main,
+body.editor-is-fullscreen .admin-content,
+body.editor-is-fullscreen .animate-fade-in-up {
+  position: static !important;
+  transform: none !important;
+  animation: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
+}
+
+/* Ensure the EasyMDE container itself is truly fixed to viewport */
+body.editor-is-fullscreen .EasyMDEContainer.fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10000 !important;
+  background: var(--surface-1-bg) !important;
+}
+
+[data-theme='dark'] body.editor-is-fullscreen .editor-toolbar.fullscreen {
+  background: #2c2c2e !important; /* Solid dark background to prevent bleed-through */
+  opacity: 1 !important;
+}
+
+[data-theme='light'] body.editor-is-fullscreen .editor-toolbar.fullscreen {
+  background: #f0f0f5 !important; /* Solid light background */
+  opacity: 1 !important;
+}
+
+.editor-toolbar button {
+  color: var(--text-secondary) !important;
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  width: 32px !important;
+  height: 32px !important;
+  margin-right: 4px !important;
+  transition: all 0.2s !important;
+}
+
+.editor-toolbar button:hover,
+.editor-toolbar button.active {
+  background: var(--surface-hover) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--surface-border) !important;
+}
+
+[data-theme='dark'] .editor-toolbar i.separator {
+  border-left: 1px solid var(--surface-border) !important;
+  border-right: none !important;
+}
+
+.editor-statusbar {
+  color: var(--text-tertiary) !important;
+  padding: 8px 16px !important;
+}
+
+/* EasyMDE Preview & Side-by-Side */
+.editor-preview-side, .editor-preview {
+  background: var(--surface-1-bg) !important;
+  color: var(--text-primary) !important;
+  line-height: 1.8 !important;
+  padding: 32px !important;
+  border: none !important;
+  border-left: 1px solid var(--surface-border) !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+}
+
+/* CodeMirror fullscreen: push down below the fixed toolbar */
+.CodeMirror.CodeMirror-fullscreen {
+  top: 50px !important;
+  bottom: 0 !important;
+  height: calc(100dvh - 50px) !important;
+  max-height: calc(100dvh - 50px) !important;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 9998 !important; /* Just below the toolbar */
+}
+
+.EasyMDEContainer .editor-preview-side {
+  height: auto !important;
+  max-height: calc(100dvh - 50px) !important;
+}
+
+.w-e-full-screen-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+.w-e-full-screen-container [data-w-e-textarea='true'] {
+  height: calc(100dvh - 52px) !important;
+  min-height: 0 !important;
+}
+
+.w-e-full-screen-container .w-e-text-container {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+}
+
+.w-e-full-screen-container .w-e-text-container [data-slate-editor] {
+  min-height: 100% !important;
+  padding-bottom: 96px !important;
+}
+
+.editor-preview-side h1, .editor-preview h1,
+.editor-preview-side h2, .editor-preview h2,
+.editor-preview-side h3, .editor-preview h3 {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 8px;
+  margin-top: 24px;
+}
+
+.editor-preview-side pre, .editor-preview pre {
+  background: var(--surface-2-bg) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+}
+
+.editor-preview-side code, .editor-preview code {
+  color: var(--accent) !important;
+  background: var(--accent-tint) !important;
+  border-radius: 4px;
+  padding: 2px 6px;
 }
 
 /* Dashboard Pulse */

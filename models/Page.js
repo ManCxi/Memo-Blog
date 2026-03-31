@@ -13,6 +13,11 @@ const Page = sequelize.define(
       defaultValue: 'published',
     },
     views: { type: DataTypes.INTEGER, defaultValue: 0 },
+    editorType: {
+      type: DataTypes.ENUM('html', 'markdown'),
+      defaultValue: 'html',
+      allowNull: false,
+    },
   },
   {
     tableName: 'Pages',

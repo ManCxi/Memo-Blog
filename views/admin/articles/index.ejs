@@ -65,7 +65,7 @@
             <td>
               <div style="font-weight:600;display:flex;align-items:center;gap:6px;">
                 <% if (article.pinned) { %><span class="status-badge status-pinned" style="font-size:10px;">📌</span><% } %>
-                <a href="/article/<%= article.slug %>" target="_blank"
+                <a href="<%= article.status === 'published' ? `/article/${article.slug}` : `/admin/articles/${article.id}/preview` %>" target="_blank"
                   style="color:var(--text-primary);text-decoration:none;transition:color .15s;"
                   onmouseover="this.style.color='var(--accent)'"
                   onmouseout="this.style.color='var(--text-primary)'">
@@ -111,7 +111,7 @@
       <div class="mobile-list-item">
         <div class="mobile-list-item-title">
           <% if (article.pinned) { %><span class="status-badge status-pinned" style="font-size:10px;">📌</span><% } %>
-          <a href="/article/<%= article.slug %>" target="_blank" style="color:var(--text-primary);">
+          <a href="<%= article.status === 'published' ? `/article/${article.slug}` : `/admin/articles/${article.id}/preview` %>" target="_blank" style="color:var(--text-primary);">
             <%= article.title %>
           </a>
         </div>

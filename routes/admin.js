@@ -123,6 +123,7 @@ router.get('/media/detail/:id', attachmentController.detail);
 router.get('/articles', articleController.index);
 router.get('/articles/create', articleController.createPage);
 router.post('/articles', upload.single('coverFile'), csrfProtection, articleController.create);
+router.get('/articles/:id/preview', articleController.preview);
 router.get('/articles/:id/edit', articleController.editPage);
 router.put('/articles/:id', upload.single('coverFile'), csrfProtection, articleController.update);
 router.delete('/articles/:id', articleController.destroy);
