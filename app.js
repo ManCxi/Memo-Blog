@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
+const { DataTypes } = require('sequelize');
 const { client: redis, enabled: redisEnabled } = require('./config/redis');
 const { sequelize, Article } = require('./models');
 const { getSettings } = require('./utils/settings');
@@ -225,11 +226,27 @@ async function normalizeMySqlTableNames() {
   }
 }
 
+async function ensureEditorTypeColumns() {
+  const queryInterface = sequelize.getQueryInterface();
+  const targets = ['Articles', 'Pages'];
+  for (const tableName of targets) {
+    const columns = await queryInterface.describeTable(tableName).catch(() => null);
+    if (!columns || columns.editorType) continue;
+    await queryInterface.addColumn(tableName, 'editorType', {
+      type: DataTypes.ENUM('html', 'markdown'),
+      defaultValue: 'html',
+      allowNull: false,
+    });
+    console.log(`✅ 已补齐字段: ${tableName}.editorType`);
+  }
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
     console.log('✅ 数据库连接成功');
     await normalizeMySqlTableNames();
+    await ensureEditorTypeColumns();
     // 尝试同步数据库结构 (仅在开发环境或明确要求时)
     if (process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true') {
       try {
@@ -267,6 +284,21 @@ async function start() {
     }
   } catch (err) {
     console.error('❌ 启动失败:', err);
+    if (err && (err.name === 'SequelizeConnectionError' || err.original)) {
+      const dialect = process.env.DB_DIALECT || 'sqlite';
+      const host =
+        sequelize.config.host ||
+        process.env.DB_HOST ||
+        (dialect === 'sqlite' ? 'N/A' : 'localhost');
+      const port =
+        sequelize.config.port ||
+        process.env.DB_PORT ||
+        (dialect === 'mysql' ? '3306' : dialect === 'postgres' ? '5432' : 'N/A');
+      console.error(`🔎 当前数据库配置: ${dialect}://${host}:${port}`);
+      if (host === 'localhost' || host === '127.0.0.1') {
+        console.error('💡 Docker bridge 网络建议使用数据库容器名；host 网络模式可使用 127.0.0.1');
+      }
+    }
     process.exit(1);
   }
 }

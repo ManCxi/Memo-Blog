@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const fs = require('fs');
 require('dotenv').config();
 
 const rawDialect = (process.env.DB_DIALECT || 'sqlite').toLowerCase();
@@ -16,7 +17,16 @@ const options = {
 if (dialect === 'sqlite') {
   options.storage = process.env.DB_STORAGE || './database.sqlite';
 } else {
-  options.host = process.env.DB_HOST || 'localhost';
+  const runningInContainer = fs.existsSync('/.dockerenv');
+  const configuredHost = process.env.DB_HOST || 'localhost';
+  const isLinux = process.platform === 'linux';
+  if (runningInContainer && (configuredHost === 'localhost' || configuredHost === '127.0.0.1')) {
+    options.host = isLinux ? '127.0.0.1' : 'host.docker.internal';
+  } else if (runningInContainer && isLinux && configuredHost === 'host.docker.internal') {
+    options.host = '127.0.0.1';
+  } else {
+    options.host = configuredHost;
+  }
   if (Number.isFinite(port)) {
     options.port = port;
   }
