@@ -99,13 +99,16 @@
   </div>
 </footer>
 
-<!-- JS Libs（本地） -->
-<script src="/libs/marked/marked.min.js" defer></script>
-<script src="/libs/dompurify/purify.min.js" defer></script>
-<script src="/libs/highlightjs/highlight.min.js" defer></script>
-<script src="/libs/mermaid/mermaid.min.js" defer></script>
-<script src="/libs/katex/katex.min.js" defer></script>
-<script src="/libs/katex/contrib/auto-render.min.js" defer></script>
+<% const currentPath = (typeof req !== 'undefined' && req && req.path) ? req.path : ''; %>
+<% const isPreviewPage = currentPath === '/preview'; %>
+<% const pageContentHtml = (typeof contentHtml !== 'undefined' && contentHtml) ? contentHtml : ''; %>
+<% const needsHighlightLib = isPreviewPage || /<pre[\s>]|<code[\s>]/i.test(pageContentHtml); %>
+<% const needsMermaidLib = isPreviewPage || /language-mermaid|class="mermaid"/i.test(pageContentHtml); %>
+<% const needsKatexLib = isPreviewPage || /\$\$|\\\(|\\\[/.test(pageContentHtml); %>
+<!-- JS Libs（本地，按内容按需加载） -->
+<% if (needsHighlightLib) { %><script src="/libs/highlightjs/highlight.min.js" defer></script><% } %>
+<% if (needsMermaidLib) { %><script src="/libs/mermaid/mermaid.min.js" defer></script><% } %>
+<% if (needsKatexLib) { %><script src="/libs/katex/katex.min.js" defer></script><script src="/libs/katex/contrib/auto-render.min.js" defer></script><% } %>
 <script>
   // 将 initArticleCodeCopy 暴露到全局，以便预览页也能调用
   function initArticleCodeCopy() {
@@ -211,14 +214,15 @@
 
   // 确保所有 deferred libs 加载后再执行
   document.addEventListener('DOMContentLoaded', function() {
+    var articleRoot = document.getElementById('articleContent') || document.body;
     // 1. 代码高亮
     if (window.hljs) {
-      document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+      articleRoot.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
     }
 
     // 2. KaTeX 数学公式
     if (window.renderMathInElement) {
-      renderMathInElement(document.body, {
+      renderMathInElement(articleRoot, {
         delimiters: [
           { left: '$$', right: '$$', display: true },
           { left: '$', right: '$', display: false }
@@ -231,7 +235,7 @@
     if (window.mermaid) {
       const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
       mermaid.initialize({ startOnLoad: false, theme });
-      document.querySelectorAll('code.language-mermaid').forEach(el => {
+      articleRoot.querySelectorAll('code.language-mermaid').forEach(el => {
         const pre = el.parentElement;
         const div = document.createElement('div');
         div.className = 'mermaid';
