@@ -1141,25 +1141,6 @@ body.editor-is-fullscreen {
   overflow: hidden !important;
 }
 
-body.editor-is-fullscreen .admin-sidebar,
-body.editor-is-fullscreen .admin-header,
-body.editor-is-fullscreen .sidebar-overlay {
-  display: none !important;
-}
-
-body.editor-is-fullscreen .admin-main,
-body.editor-is-fullscreen .admin-content,
-body.editor-is-fullscreen .animate-fade-in-up {
-  position: static !important;
-  transform: none !important;
-  animation: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  overflow: visible !important;
-}
-
 /* Ensure the EasyMDE container itself is truly fixed to viewport */
 body.editor-is-fullscreen .EasyMDEContainer.fullscreen {
   position: fixed !important;
