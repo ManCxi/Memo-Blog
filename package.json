@@ -8,7 +8,8 @@
     "dev": "nodemon app.js",
     "init": "node init.js",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "bundle-css": "node scripts/bundle-css.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

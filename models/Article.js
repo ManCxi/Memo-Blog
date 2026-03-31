@@ -24,6 +24,11 @@ const Article = sequelize.define(
   {
     tableName: 'Articles',
     freezeTableName: true,
+    indexes: [
+      { fields: ['status'] },
+      { fields: ['pinned'] },
+      { fields: ['publishedAt'] },
+    ],
   }
 );
 
