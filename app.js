@@ -243,12 +243,25 @@ async function ensureEditorTypeColumns() {
   }
 }
 
+async function ensureIsHtmlCodeColumn() {
+  const queryInterface = sequelize.getQueryInterface();
+  const columns = await queryInterface.describeTable('Pages').catch(() => null);
+  if (!columns || columns.isHtmlCode) return;
+  await queryInterface.addColumn('Pages', 'isHtmlCode', {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  });
+  console.log('✅ 已补齐字段: Pages.isHtmlCode');
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
     console.log('✅ 数据库连接成功');
     await normalizeMySqlTableNames();
     await ensureEditorTypeColumns();
+    await ensureIsHtmlCodeColumn();
     // 尝试同步数据库结构 (仅在开发环境或明确要求时)
     if (process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true') {
       try {
