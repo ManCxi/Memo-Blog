@@ -38,8 +38,9 @@ const anyUpload = multer({
     },
   }),
   fileFilter(req, file, cb) {
-    // 严格白名单：图片、常用文档、压缩包
-    const allowedExtensions = /\.(jpg|jpeg|png|gif|webp|ico|svg|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|rar|7z)$/i;
+    // 严格白名单：图片、常用文档、压缩包、HTML
+    const allowedExtensions =
+      /\.(jpg|jpeg|jfif|png|gif|webp|ico|svg|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|rar|7z|html|htm)$/i;
     const allowedMimes = [
       'image/jpeg',
       'image/png',
@@ -58,6 +59,7 @@ const anyUpload = multer({
       'application/zip',
       'application/x-rar-compressed',
       'application/x-7z-compressed',
+      'text/html',
     ];
 
     const ext = path.extname(file.originalname).toLowerCase();
@@ -66,7 +68,7 @@ const anyUpload = multer({
     if (!allowedExtensions.test(ext) || !allowedMimes.includes(mime)) {
       return cb(new Error('不允许上传该文件类型，仅支持图片、文档及压缩包'), false);
     }
-    
+
     // 二次检查：防止 SVG 包含脚本 (简单检查)
     if (ext === '.svg' || mime === 'image/svg+xml') {
       // 如果需要更严格的 SVG 过滤，建议使用专门的库，这里先做简单阻断

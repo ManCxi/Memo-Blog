@@ -313,8 +313,16 @@ async function openMediaDetail(id) {
   document.getElementById('mdSize').textContent = item.sizeFormatted;
   document.getElementById('mdTime').textContent = new Date(item.createdAt).toLocaleString();
   document.getElementById('mdUrl').value = item.path;
-  document.getElementById('mdHtml').value = `<img src="${item.path}" alt="">`;
-  document.getElementById('mdMd').value = `![](${item.path})`;
+  const siteUrlSetting = '<%= (settings && settings.site_url) || "" %>';
+  const baseDomain = siteUrlSetting ? siteUrlSetting.trim().replace(/\/$/, '') : window.location.origin;
+  document.getElementById('mdFullUrl').value = baseDomain + item.path;
+  if (item.fileType === 'image') {
+    document.getElementById('mdHtml').value = `<img src="${item.path}" alt="">`;
+    document.getElementById('mdMd').value = `![](${item.path})`;
+  } else {
+    document.getElementById('mdHtml').value = `<a href="${item.path}" target="_blank">${item.filename}</a>`;
+    document.getElementById('mdMd').value = `[${item.filename}](${item.path})`;
+  }
   document.getElementById('mdDeleteBtn').onclick = () => { deleteFile(item.id); };
   modal.style.display = 'flex';
 }
@@ -496,6 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-group" style="margin-bottom:8px;"><label class="form-label" style="display:inline-block;width:60px;">时间</label><span id="mdTime" class="text-tertiary"></span></div>
       </div>
       <div class="form-group"><label class="form-label">URL 链接</label><div style="display:flex;gap:6px;"><input id="mdUrl" class="form-control form-control-sm" readonly><button class="btn btn-secondary btn-sm" onclick="copyFrom('mdUrl')">复制</button></div></div>
+      <div class="form-group"><label class="form-label">完整链接</label><div style="display:flex;gap:6px;"><input id="mdFullUrl" class="form-control form-control-sm" readonly><button class="btn btn-secondary btn-sm" onclick="copyFrom('mdFullUrl')">复制</button></div></div>
       <div class="form-group"><label class="form-label">HTML 标签</label><div style="display:flex;gap:6px;"><input id="mdHtml" class="form-control form-control-sm" readonly><button class="btn btn-secondary btn-sm" onclick="copyFrom('mdHtml')">复制</button></div></div>
       <div class="form-group"><label class="form-label">Markdown</label><div style="display:flex;gap:6px;"><input id="mdMd" class="form-control form-control-sm" readonly><button class="btn btn-secondary btn-sm" onclick="copyFrom('mdMd')">复制</button></div></div>
     </div>

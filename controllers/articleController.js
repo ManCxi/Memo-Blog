@@ -3,20 +3,25 @@ const { cache, CACHE_EXPIRES } = require('../utils/cache');
 const { enabled: redisEnabled } = require('../config/redis');
 const { marked } = require('marked');
 const { getSidebarData } = require('../services/sidebarService');
+const { sanitize } = require('../utils/sanitizer');
 
 const PAGE_SIZE = 10;
 
 function renderArticleContent(content, editorType) {
   const raw = String(content || '');
   if (!raw.trim()) return '';
-  if (editorType === 'markdown') return marked(raw);
 
-  const hasRichHtml =
-    /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(
-      raw
-    );
-  if (hasRichHtml) return raw;
-  return marked(raw);
+  let html = '';
+  if (editorType === 'markdown') {
+    html = marked(raw);
+  } else {
+    const hasRichHtml =
+      /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(
+        raw
+      );
+    html = hasRichHtml ? raw : marked(raw);
+  }
+  return sanitize(html);
 }
 
 // getSidebarData moved to services/sidebarService.js

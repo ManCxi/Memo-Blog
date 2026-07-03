@@ -3,8 +3,6 @@
    引用：/category* /tag* 路由（通过 head.ejs 按页加载）
 ============================================================ */
 
-
-
 /* Tag chip filter */
 .tag-chip-filter {
   padding: 5px 13px;
@@ -24,8 +22,6 @@
   color: var(--accent);
   border-color: transparent;
 }
-
-
 
 /* Category article card (card style) */
 .category-article-list {

@@ -7,7 +7,7 @@ const bundleFile = path.join(publicCssDir, 'main.bundle.css');
 
 function bundleCss() {
   console.log('📦 Starting CSS bundling...');
-  
+
   if (!fs.existsSync(mainCssFile)) {
     console.error('❌ main.css not found:', mainCssFile);
     return;
@@ -22,7 +22,7 @@ function bundleCss() {
   while ((match = importRegex.exec(content)) !== null) {
     const importPath = match[1];
     const absolutePath = path.resolve(publicCssDir, importPath);
-    
+
     if (fs.existsSync(absolutePath)) {
       console.log(`  ➕ Adding: ${importPath}`);
       const fileContent = fs.readFileSync(absolutePath, 'utf8');

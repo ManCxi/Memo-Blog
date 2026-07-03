@@ -48,7 +48,7 @@ exports.createPage = (req, res) => {
 // 新建页面保存
 exports.create = async (req, res) => {
   try {
-    let { title, slug, content, status, editorType } = req.body;
+    let { title, slug, content, status, editorType, isHtmlCode } = req.body;
 
     if (!slug) {
       slug = slugify(title, { lower: true, strict: true });
@@ -68,8 +68,17 @@ exports.create = async (req, res) => {
       });
     }
 
-    const sanitizedContent = editorType === 'markdown' ? content : sanitize(content);
-    await Page.create({ title, slug, content: sanitizedContent, status, editorType: editorType || 'html' });
+    const isHtml = isHtmlCode === '1' || isHtmlCode === 'true' || req.body.editorMode === 'raw';
+    const sanitizedContent =
+      editorType === 'markdown' ? content : isHtml ? content : sanitize(content);
+    await Page.create({
+      title,
+      slug,
+      content: sanitizedContent,
+      status,
+      editorType: editorType || 'html',
+      isHtmlCode: isHtml,
+    });
     res.redirect('/admin/pages');
   } catch (err) {
     console.error(err);
@@ -105,7 +114,7 @@ exports.update = async (req, res) => {
     const page = await Page.findByPk(req.params.id);
     if (!page) return res.status(404).send('页面不存在');
 
-    let { title, slug, content, status, editorType } = req.body;
+    let { title, slug, content, status, editorType, isHtmlCode } = req.body;
 
     // 检查 slug 唯一性（排除自身）
     const { Op } = require('sequelize');
@@ -124,8 +133,18 @@ exports.update = async (req, res) => {
       });
     }
 
-    const sanitizedContent = (editorType || page.editorType) === 'markdown' ? content : sanitize(content);
-    await page.update({ title, slug, content: sanitizedContent, status, editorType: editorType || page.editorType });
+    const isHtml = isHtmlCode === '1' || isHtmlCode === 'true' || req.body.editorMode === 'raw';
+    const finalEditorType = editorType || page.editorType;
+    const sanitizedContent =
+      finalEditorType === 'markdown' ? content : isHtml ? content : sanitize(content);
+    await page.update({
+      title,
+      slug,
+      content: sanitizedContent,
+      status,
+      editorType: finalEditorType,
+      isHtmlCode: isHtml,
+    });
     res.redirect('/admin/pages');
   } catch (err) {
     console.error(err);

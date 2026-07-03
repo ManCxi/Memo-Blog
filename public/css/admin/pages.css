@@ -370,7 +370,9 @@
   padding: 16px;
   font-size: 15px;
   line-height: 1.8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   outline: none;
 }
 .article-editor-wrap {
@@ -1101,8 +1103,7 @@ body.article-form-page .w-e-scroll {
   justify-content: center;
   background:
     radial-gradient(circle at 12% 12%, rgba(255, 107, 53, 0.12), transparent 36%),
-    radial-gradient(circle at 88% 82%, rgba(10, 122, 255, 0.1), transparent 38%),
-    #f5f6fa;
+    radial-gradient(circle at 88% 82%, rgba(10, 122, 255, 0.1), transparent 38%), #f5f6fa;
   overflow: hidden;
   position: relative;
   padding: 40px 20px;
@@ -1249,7 +1250,10 @@ body.article-form-page .w-e-scroll {
   padding: 14px;
   cursor: pointer;
   overflow: hidden;
-  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.15s;
 }
 .cover-picker-box:hover {
   border-color: color-mix(in srgb, var(--accent) 60%, var(--surface-border));
@@ -1591,14 +1595,18 @@ body.article-form-page .w-e-scroll {
 
 /* EasyMDE / CodeMirror Dark Theme & Beautification */
 .CodeMirror {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji" !important;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji' !important;
   font-size: 16px !important;
   line-height: 1.7 !important;
   color: var(--text-primary) !important;
   background: var(--surface-1-bg) !important;
   border: none !important;
   height: 100% !important;
-  transition: background 0.3s, color 0.3s;
+  transition:
+    background 0.3s,
+    color 0.3s;
 }
 
 [data-theme='dark'] .CodeMirror {
@@ -1610,7 +1618,8 @@ body.article-form-page .w-e-scroll {
   padding: 24px 12px !important; /* Proper padding for text */
 }
 
-.CodeMirror-vscrollbar, .CodeMirror-hscrollbar {
+.CodeMirror-vscrollbar,
+.CodeMirror-hscrollbar {
   z-index: 100 !important; /* Ensure scrollbars are visible */
 }
 
@@ -1683,7 +1692,8 @@ body.editor-is-fullscreen .EasyMDEContainer.fullscreen {
 }
 
 /* EasyMDE Preview & Side-by-Side */
-.editor-preview-side, .editor-preview {
+.editor-preview-side,
+.editor-preview {
   background: var(--surface-1-bg) !important;
   color: var(--text-primary) !important;
   line-height: 1.8 !important;
@@ -1734,22 +1744,27 @@ body.editor-is-fullscreen .EasyMDEContainer.fullscreen {
   padding-bottom: 96px !important;
 }
 
-.editor-preview-side h1, .editor-preview h1,
-.editor-preview-side h2, .editor-preview h2,
-.editor-preview-side h3, .editor-preview h3 {
+.editor-preview-side h1,
+.editor-preview h1,
+.editor-preview-side h2,
+.editor-preview h2,
+.editor-preview-side h3,
+.editor-preview h3 {
   color: var(--text-primary) !important;
   border-bottom: 1px solid var(--surface-border);
   padding-bottom: 8px;
   margin-top: 24px;
 }
 
-.editor-preview-side pre, .editor-preview pre {
+.editor-preview-side pre,
+.editor-preview pre {
   background: var(--surface-2-bg) !important;
   border-radius: 12px !important;
   padding: 16px !important;
 }
 
-.editor-preview-side code, .editor-preview code {
+.editor-preview-side code,
+.editor-preview code {
   color: var(--accent) !important;
   background: var(--accent-tint) !important;
   border-radius: 4px;
@@ -2020,8 +2035,7 @@ body.editor-is-fullscreen .EasyMDEContainer.fullscreen {
 [data-theme='dark'] .login-page-bg {
   background:
     radial-gradient(circle at 12% 10%, rgba(255, 107, 53, 0.24), transparent 40%),
-    radial-gradient(circle at 90% 84%, rgba(10, 122, 255, 0.18), transparent 42%),
-    #050506;
+    radial-gradient(circle at 90% 84%, rgba(10, 122, 255, 0.18), transparent 42%), #050506;
 }
 [data-theme='dark'] .login-card {
   box-shadow:

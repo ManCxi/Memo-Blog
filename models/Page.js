@@ -18,6 +18,11 @@ const Page = sequelize.define(
       defaultValue: 'html',
       allowNull: false,
     },
+    isHtmlCode: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
   },
   {
     tableName: 'Pages',

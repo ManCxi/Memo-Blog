@@ -1,0 +1,1793 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>考勤精细化统计工具 - 本地解析大盘</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Include SheetJS (XLSX) from local server to satisfy CSP -->
+    <script src="/libs/xlsx/xlsx.full.min.js"></script>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --primary-light: #eff6ff;
+        --success: #10b981;
+        --success-light: #ecfdf5;
+        --warning: #f59e0b;
+        --warning-light: #fef3c7;
+        --danger: #ef4444;
+        --danger-light: #fef2f2;
+        --info: #06b6d4;
+        --info-light: #ecfeff;
+        --dark-gray: #1e293b;
+        --gray: #64748b;
+        --light-gray: #f8fafc;
+        --border: #e2e8f0;
+
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Inter', 'Noto Sans SC', sans-serif;
+        background: #f1f5f9;
+        color: var(--dark-gray);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        padding-bottom: 60px;
+      }
+
+      header {
+        background: #fff;
+        border-bottom: 1px solid var(--border);
+        padding: 20px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .logo-area h1 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f172a;
+        letter-spacing: -0.5px;
+      }
+
+      .logo-area p {
+        font-size: 13px;
+        color: var(--gray);
+        margin-top: 3px;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #fff;
+        color: var(--dark-gray);
+        cursor: pointer;
+        transition: all 0.2s;
+        outline: none;
+      }
+
+      .btn:hover {
+        background: var(--light-gray);
+        border-color: #cbd5e1;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-hover);
+        border-color: var(--primary-hover);
+      }
+
+      .btn-success {
+        background: var(--success);
+        border-color: var(--success);
+        color: #fff;
+      }
+
+      .btn-success:hover {
+        background: #059669;
+        border-color: #059669;
+      }
+
+      /* Upload Screen */
+      .upload-container {
+        max-width: 800px;
+        margin: 80px auto;
+        padding: 0 20px;
+        display: block;
+      }
+
+      .upload-card {
+        background: #fff;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        padding: 48px;
+        text-align: center;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .dropzone {
+        border: 2px dashed #cbd5e1;
+        border-radius: 14px;
+        padding: 40px 20px;
+        background: var(--light-gray);
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 24px;
+      }
+
+      .dropzone:hover,
+      .dropzone.dragover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+      }
+
+      .upload-icon {
+        font-size: 48px;
+        color: var(--primary);
+        margin-bottom: 16px;
+      }
+
+      .upload-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 8px;
+      }
+
+      .upload-subtitle {
+        font-size: 14px;
+        color: var(--gray);
+        margin-bottom: 20px;
+      }
+
+      .privacy-notice {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: var(--success);
+        font-size: 13px;
+        font-weight: 500;
+        background: var(--success-light);
+        padding: 10px 16px;
+        border-radius: 8px;
+        width: fit-content;
+        margin: 0 auto;
+      }
+
+      /* Main Dashboard Screen */
+      .dashboard-container {
+        max-width: 1440px;
+        margin: 32px auto 0;
+        padding: 0 40px;
+        display: none;
+        /* Shown dynamically after load */
+        grid-template-columns: 280px 1fr;
+        gap: 32px;
+      }
+
+      /* Sidebar Employee Selector */
+      .sidebar {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 24px 16px;
+        height: fit-content;
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--gray);
+        margin-bottom: 16px;
+        padding-left: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .employee-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .employee-item {
+        padding: 12px 16px;
+        font-size: 15px;
+        font-weight: 500;
+        border-radius: 10px;
+        cursor: pointer;
+        color: #334155;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .employee-item:hover {
+        background: var(--light-gray);
+        color: var(--primary);
+      }
+
+      .employee-item.active {
+        background: var(--primary-light);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .employee-item .badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-weight: 500;
+      }
+
+      .employee-item.active .badge {
+        background: var(--primary);
+        color: #fff;
+      }
+
+      .employee-item .badge-ot {
+        background: var(--primary-light);
+        color: var(--primary);
+      }
+
+      .employee-item .badge-danger {
+        background: var(--danger-light);
+        color: var(--danger);
+      }
+
+      /* Main Panel */
+      .main-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+
+      /* Settings Panel */
+      .settings-card {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 24px;
+        box-shadow: var(--shadow);
+        display: none;
+        /* Controlled by toggle */
+      }
+
+      .settings-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 8px;
+      }
+
+      .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .form-group label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+      }
+
+      .form-group input {
+        padding: 8px 12px;
+        font-size: 14px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        outline: none;
+        transition: all 0.2s;
+      }
+
+      .form-group input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px var(--primary-light);
+      }
+
+      .form-group.span-full {
+        grid-column: 1 / -1;
+      }
+
+      /* Overview Section */
+      .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+      }
+
+      .card-metric {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 24px;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card-metric::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+      }
+
+      .card-metric.primary::after {
+        background: var(--primary);
+      }
+
+      .card-metric.success::after {
+        background: var(--success);
+      }
+
+      .card-metric.warning::after {
+        background: var(--warning);
+      }
+
+      .card-metric.danger::after {
+        background: var(--danger);
+      }
+
+      .card-metric.info::after {
+        background: var(--info);
+      }
+
+      .metric-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--gray);
+      }
+
+      .metric-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-top: 8px;
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+      }
+
+      .metric-value span {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--gray);
+      }
+
+      .metric-subtext {
+        font-size: 12px;
+        color: var(--gray);
+        margin-top: 4px;
+      }
+
+      /* Detail Blocks */
+      .section-card {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 32px;
+        box-shadow: var(--shadow);
+      }
+
+      .section-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid var(--light-gray);
+        padding-bottom: 12px;
+      }
+
+      /* Attendance Grid (Calendar style) */
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .calendar-header-day {
+        text-align: center;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray);
+        padding: 8px 0;
+        background: var(--light-gray);
+        border-radius: 6px;
+        border: 1px solid var(--border);
+      }
+
+      .calendar-day-cell {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: all 0.2s;
+        position: relative;
+      }
+
+      .calendar-day-cell:hover {
+        box-shadow: var(--shadow);
+        border-color: #cbd5e1;
+      }
+
+      .calendar-day-cell.weekend {
+        background: #f8fafc;
+      }
+
+      .calendar-day-cell.holiday {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+      }
+
+      .calendar-day-cell.empty {
+        border: 1px dashed var(--border);
+        background: transparent;
+        opacity: 0.3;
+      }
+
+      .day-num-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .day-num-header .day-num {
+        color: #475569;
+      }
+
+      .day-num-header .day-type {
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+
+      .day-type.workday {
+        background: #e2e8f0;
+        color: #475569;
+      }
+
+      .day-type.weekend-rest {
+        background: #f1f5f9;
+        color: #64748b;
+      }
+
+      .day-type.holiday-rest {
+        background: var(--success-light);
+        color: var(--success);
+      }
+
+      .day-punches {
+        margin-top: 10px;
+        font-size: 11px;
+        color: #334155;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .punch-record {
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .punch-record.missing {
+        background: var(--danger-light);
+        color: var(--danger);
+        font-weight: 500;
+      }
+
+      .punch-record .meta {
+        font-size: 9px;
+        color: var(--gray);
+      }
+
+      .day-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 10px;
+      }
+
+      .badge-tag {
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-weight: 600;
+        display: inline-block;
+      }
+
+      .badge-tag.ot {
+        background: var(--primary-light);
+        color: var(--primary);
+      }
+
+      .badge-tag.late {
+        background: var(--warning-light);
+        color: var(--warning);
+      }
+
+      .badge-tag.early {
+        background: #fce7f3;
+        color: #db2777;
+      }
+
+      .badge-tag.missing {
+        background: var(--danger-light);
+        color: var(--danger);
+      }
+
+      .badge-tag.duplicate {
+        background: var(--info-light);
+        color: var(--info);
+      }
+
+      /* Formula box */
+      .formula-box {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-top: 24px;
+        font-family: inherit;
+        color: #334155;
+      }
+
+      .formula-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--gray);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .formula-expr {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .formula-expr .result-highlight {
+        color: var(--primary);
+        background: var(--primary-light);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 17px;
+      }
+
+      .formula-desc {
+        font-size: 13px;
+        color: var(--gray);
+        margin-top: 8px;
+        line-height: 1.45;
+      }
+
+      /* Exception Lists */
+      .list-exceptions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .exception-item {
+        display: flex;
+        align-items: center;
+        padding: 14px 20px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        font-size: 14px;
+      }
+
+      .exception-item.ot {
+        border-left: 4px solid var(--primary);
+        background: #fafcff;
+      }
+
+      .exception-item.late {
+        border-left: 4px solid var(--warning);
+        background: #fffdf9;
+      }
+
+      .exception-item.early {
+        border-left: 4px solid #db2777;
+        background: #fffafc;
+      }
+
+      .exception-item.missing {
+        border-left: 4px solid var(--danger);
+        background: var(--danger-light);
+        color: #7f1d1d;
+      }
+
+      .exception-item .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 599px;
+        margin-right: 12px;
+      }
+
+      .exception-item.ot .dot {
+        background: var(--primary);
+      }
+
+      .exception-item.late .dot {
+        background: var(--warning);
+      }
+
+      .exception-item.early .dot {
+        background: #db2777;
+      }
+
+      .exception-item.missing .dot {
+        background: var(--danger);
+      }
+
+      .exception-item .content {
+        flex: 1;
+        font-weight: 500;
+      }
+
+      /* Empty state */
+      .empty-state {
+        padding: 40px;
+        text-align: center;
+        color: var(--gray);
+        font-size: 14px;
+        border: 2px dashed var(--border);
+        border-radius: 12px;
+        margin-top: 16px;
+      }
+
+      /* Mobile Responsive Adaptations */
+      @media (max-width: 991px) {
+        .dashboard-container {
+          grid-template-columns: 1fr !important;
+          padding: 0 16px;
+          gap: 16px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 16px;
+          padding: 16px;
+        }
+
+        .action-buttons {
+          width: 100%;
+          display: flex;
+          gap: 8px;
+        }
+
+        .action-buttons .btn {
+          flex: 1;
+          justify-content: center;
+        }
+
+        .logo-area h1 {
+          font-size: 18px;
+        }
+
+        .logo-area p {
+          font-size: 12px;
+        }
+
+        .upload-card {
+          padding: 24px;
+        }
+
+        .dropzone {
+          padding: 24px 16px;
+        }
+
+        .section-card {
+          padding: 16px;
+        }
+
+        .overview-grid {
+          grid-template-columns: repeat(2, 1fr) !important;
+          gap: 12px !important;
+        }
+
+        .card-metric {
+          padding: 12px !important;
+        }
+
+        .metric-value {
+          font-size: 20px !important;
+        }
+
+        #breakdownGrid {
+          grid-template-columns: 1fr !important;
+          gap: 16px !important;
+        }
+
+        /* Calendar scrollable on small screens to prevent squeezing */
+        .calendar-grid {
+          grid-template-columns: repeat(7, 100px) !important;
+          min-width: 700px;
+        }
+
+        .calendar-day-cell {
+          min-height: 100px;
+          padding: 8px;
+        }
+
+        .day-num-header {
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div class="logo-area">
+        <h1 id="pageMainTitle">考勤精细化统计大盘</h1>
+        <p id="pageSubtitle">支持工作日本地解析、重复打卡以最晚为准去重、跨天加班关联与自动统计</p>
+      </div>
+      <div class="action-buttons" id="headerActions" style="display: none">
+        <button class="btn" onclick="toggleSettings()">考勤规则微调</button>
+        <button class="btn btn-primary" onclick="resetFile()">上传新文件</button>
+      </div>
+    </header>
+
+    <!-- Upload Screen Container -->
+    <div class="upload-container" id="uploadContainer">
+      <div class="upload-card">
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('excelFile').click()">
+          <div class="upload-icon">📂</div>
+          <div class="upload-title">点击选择 或 拖拽考勤 Excel 到这里</div>
+          <div class="upload-subtitle">支持打卡时间原始数据表格文件 (.xlsx, .xls)</div>
+          <input
+            type="file"
+            id="excelFile"
+            accept=".xlsx, .xls"
+            style="display: none"
+            onchange="handleFileSelect(event)"
+          />
+          <button class="btn btn-primary">选择本地 Excel 文件</button>
+        </div>
+        <div class="privacy-notice">
+          🔒 考勤数据解析完全在本地浏览器中运行，绝对不会上传到网络服务器。
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Container -->
+    <main class="dashboard-container" id="dashboardContainer">
+      <!-- Sidebar Selector -->
+      <aside class="sidebar">
+        <h3 class="sidebar-title">员工选择</h3>
+        <ul class="employee-list" id="employeeList">
+          <!-- Dynamic list will go here -->
+        </ul>
+      </aside>
+
+      <!-- Main Content Area -->
+      <div class="main-panel" id="mainPanel">
+        <!-- Settings Panel Drawer -->
+        <div class="settings-card" id="settingsCard">
+          <h3 class="settings-title">全局考勤与放假规则微调</h3>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label for="cfgWorkStart">上午上班时间</label>
+              <input type="text" id="cfgWorkStart" value="10:00" placeholder="10:00" />
+            </div>
+            <div class="form-group">
+              <label for="cfgLunchStart">午休开始</label>
+              <input type="text" id="cfgLunchStart" value="12:30" placeholder="12:30" />
+            </div>
+            <div class="form-group">
+              <label for="cfgLunchEnd">午休结束</label>
+              <input type="text" id="cfgLunchEnd" value="13:30" placeholder="13:30" />
+            </div>
+            <div class="form-group">
+              <label for="cfgWorkEnd">下午下班时间</label>
+              <input type="text" id="cfgWorkEnd" value="19:00" placeholder="19:00" />
+            </div>
+            <div class="form-group">
+              <label for="cfgMorningOtLimit">早上加班阈值 (在此前起算)</label>
+              <input type="text" id="cfgMorningOtLimit" value="09:30" placeholder="09:30" />
+            </div>
+            <div class="form-group">
+              <label for="cfgEveningOtStart">晚上加班起算</label>
+              <input type="text" id="cfgEveningOtStart" value="20:00" placeholder="20:00" />
+            </div>
+            <div class="form-group span-full">
+              <label for="cfgHolidays">法定放假日期 (使用逗号隔开，格式 YYYY-MM-DD)</label>
+              <input
+                type="text"
+                id="cfgHolidays"
+                value="2026-06-19"
+                placeholder="例如: 2026-06-19"
+              />
+            </div>
+          </div>
+          <button class="btn btn-success" onclick="applySettings()">保存配置并重新计算</button>
+        </div>
+
+        <!-- Statistics overview for selected employee -->
+        <div class="overview-grid" id="metricsGrid">
+          <!-- Dynamic metrics will go here -->
+        </div>
+
+        <!-- Attendance Calendar Grid -->
+        <section class="section-card">
+          <div class="section-title">
+            <span>考勤打卡日历日记表</span>
+            <span style="font-size: 13px; color: var(--gray); font-weight: normal"
+              >高亮色块代表迟到、提前下班或加班，10分钟去重</span
+            >
+          </div>
+          <div
+            class="calendar-scroll-wrapper"
+            style="
+              overflow-x: auto;
+              -webkit-overflow-scrolling: touch;
+              width: 100%;
+              padding-bottom: 8px;
+            "
+          >
+            <div class="calendar-grid" id="calendarGrid">
+              <!-- Calendar headers -->
+              <div class="calendar-header-day">周一</div>
+              <div class="calendar-header-day">周二</div>
+              <div class="calendar-header-day">周三</div>
+              <div class="calendar-header-day">周四</div>
+              <div class="calendar-header-day">周五</div>
+              <div class="calendar-header-day">周六</div>
+              <div class="calendar-header-day">周日</div>
+              <!-- Days will be rendered dynamically -->
+            </div>
+          </div>
+
+          <div id="formulaBoxContainer">
+            <!-- Formula will go here -->
+          </div>
+        </section>
+
+        <!-- Detailed Issue Breakdown -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px" id="breakdownGrid">
+          <section class="section-card">
+            <div class="section-title">加班时长明细</div>
+            <div class="list-exceptions" id="otList"></div>
+          </section>
+          <section class="section-card">
+            <div class="section-title">调休与提前下班明细</div>
+            <div class="list-exceptions" id="leaveList"></div>
+          </section>
+        </div>
+
+        <section class="section-card" id="missingSectionCard">
+          <div class="section-title">缺卡及异常判定 (共计需人工确认)</div>
+          <div class="list-exceptions" id="missingList"></div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      // Global States
+      let excelRows = null;
+      let employeesData = [];
+      let currentEmployeeIndex = 0;
+      let parsedYear = 2026;
+      let parsedMonth = 6;
+      let parsedDaysCount = 30;
+      let daysInfo = [];
+
+      // Current Configurations
+      let config = {
+        workStart: '10:00',
+        lunchStart: '12:30',
+        lunchEnd: '13:30',
+        workEnd: '19:00',
+        morningOtLimit: '09:30',
+        eveningOtStart: '20:00',
+        holidays: ['2026-06-19'],
+        specialWorkdays: [],
+      };
+
+      // Drag and Drop Zone Initialization
+      const dropzone = document.getElementById('dropzone');
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          processExcel(files[0]);
+        }
+      });
+
+      // Handle Upload File Select
+      function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+          processExcel(file);
+        }
+      }
+
+      // Parse Excel Workbook using SheetJS
+      function processExcel(file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[firstSheetName];
+
+            // Parse sheet to array of rows
+            excelRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+            if (!excelRows || excelRows.length < 4) {
+              alert('表格解析错误：未检测到合法的打卡数据记录！');
+              return;
+            }
+
+            // Automatically extract Year and Month from row 1 title string
+            extractYearAndMonth(excelRows[1]?.[0] || '');
+
+            // Run calculations with default config
+            calculateAttendance();
+
+            // Transition screens
+            document.getElementById('uploadContainer').style.display = 'none';
+            document.getElementById('headerActions').style.display = 'flex';
+            document.getElementById('dashboardContainer').style.display = 'grid';
+
+            // Update Page Title
+            document.getElementById('pageMainTitle').innerText =
+              `${parsedYear}年${parsedMonth}月打卡精细化统计大盘`;
+            document.getElementById('pageSubtitle').innerText =
+              `已加载数据文件：${file.name} （本地解析完成）`;
+
+            // Select first employee
+            selectEmployee(0);
+          } catch (error) {
+            console.error(error);
+            alert('解析 Excel 文件出错：' + error.message);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      // Extract Year and Month from Excel subheader string
+      function extractYearAndMonth(titleStr) {
+        let year = 2026;
+        let month = 6;
+
+        // Match year (e.g. "2026")
+        const yearMatch =
+          titleStr.match(/(?:20)?\d{2}(?=-\d{2}-\d{2})/g) || titleStr.match(/20\d{2}/g);
+        if (yearMatch && yearMatch.length > 0) {
+          year = parseInt(yearMatch[0], 10);
+        }
+
+        // Match month in title range, e.g., "统计时间:06-01"
+        const monthMatch = titleStr.match(/统计时间:(\d{2})/);
+        if (monthMatch) {
+          month = parseInt(monthMatch[1], 10);
+        }
+
+        parsedYear = year;
+        parsedMonth = month;
+
+        // Pre-fill holiday input with standard dates based on month
+        if (parsedYear === 2026 && parsedMonth === 6) {
+          document.getElementById('cfgHolidays').value = '2026-06-19';
+          config.holidays = ['2026-06-19'];
+        } else {
+          // Clear or make default
+          document.getElementById('cfgHolidays').value = '';
+          config.holidays = [];
+        }
+      }
+
+      // Reset view and upload new file
+      function resetFile() {
+        excelRows = null;
+        employeesData = [];
+        currentEmployeeIndex = 0;
+
+        document.getElementById('excelFile').value = '';
+        document.getElementById('uploadContainer').style.display = 'block';
+        document.getElementById('headerActions').style.display = 'none';
+        document.getElementById('dashboardContainer').style.display = 'none';
+        document.getElementById('settingsCard').style.display = 'none';
+
+        document.getElementById('pageMainTitle').innerText = `企业微信考勤精细化统计大盘`;
+        document.getElementById('pageSubtitle').innerText =
+          `支持工作日本地解析、重复打卡以最晚为准去重、跨天加班关联与自动统计`;
+      }
+
+      // Toggle Settings drawer
+      function toggleSettings() {
+        const card = document.getElementById('settingsCard');
+        card.style.display =
+          card.style.display === 'none' || !card.style.display ? 'block' : 'none';
+      }
+
+      // Apply custom settings and re-calculate
+      function applySettings() {
+        config.workStart = document.getElementById('cfgWorkStart').value.trim();
+        config.lunchStart = document.getElementById('cfgLunchStart').value.trim();
+        config.lunchEnd = document.getElementById('cfgLunchEnd').value.trim();
+        config.workEnd = document.getElementById('cfgWorkEnd').value.trim();
+        config.morningOtLimit = document.getElementById('cfgMorningOtLimit').value.trim();
+        config.eveningOtStart = document.getElementById('cfgEveningOtStart').value.trim();
+
+        const holidayStr = document.getElementById('cfgHolidays').value.trim();
+        config.holidays = holidayStr
+          ? holidayStr
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [];
+
+        calculateAttendance();
+        selectEmployee(currentEmployeeIndex);
+        toggleSettings();
+      }
+
+      // Time calculations helpers
+      function timeToMinutes(timeStr) {
+        if (!timeStr) return 0;
+        const parts = timeStr.split(':');
+        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      }
+
+      function minutesToTimeStr(minutes) {
+        const h = Math.floor(minutes / 60) % 24;
+        const m = minutes % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+
+      function minutesToHours(minutes) {
+        return (minutes / 60).toFixed(2);
+      }
+
+      function getDateStr(dayNum) {
+        return `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      }
+
+      // Parse punches in Excel cell
+      function parseCellPunches(cellVal) {
+        if (!cellVal || cellVal === '--') return [];
+        const tokens = String(cellVal).replace(/\r?\n/g, '、').split('、');
+        const punches = [];
+        for (const token of tokens) {
+          const cleaned = token.trim();
+          if (!cleaned) continue;
+          const match = cleaned.match(/(\d{1,2}:\d{2})(?:\(([^)]+)\))?/);
+          if (match) {
+            const timeStr = match[1];
+            const metadata = match[2] || '';
+            const timeParts = timeStr.split(':');
+            const standardTimeStr = `${timeParts[0].padStart(2, '0')}:${timeParts[1].padStart(2, '0')}`;
+            punches.push({
+              timeStr: standardTimeStr,
+              minutes: timeToMinutes(standardTimeStr),
+              metadata,
+              original: cleaned,
+            });
+          }
+        }
+        return punches;
+      }
+
+      // Deduplicate punches (10 minute window, keep latest)
+      function deduplicatePunches(punches) {
+        if (punches.length <= 1) return punches;
+        punches.sort((a, b) => a.minutes - b.minutes);
+        const groups = [];
+        for (const p of punches) {
+          if (groups.length === 0) {
+            groups.push([p]);
+          } else {
+            const currentGroup = groups[groups.length - 1];
+            const lastPunch = currentGroup[currentGroup.length - 1];
+            if (p.minutes - lastPunch.minutes <= 10) {
+              currentGroup.push(p);
+            } else {
+              groups.push([p]);
+            }
+          }
+        }
+        return groups.map((group) => {
+          let latest = group[0];
+          for (const p of group) {
+            if (p.minutes > latest.minutes) {
+              latest = p;
+            }
+          }
+          if (group.length > 1) {
+            const allMetas = group.map((p) => p.metadata).filter(Boolean);
+            const uniqueMetas = [...new Set(allMetas)];
+            const mergedMeta = uniqueMetas.join('/') || '重复去重';
+            return {
+              ...latest,
+              metadata: mergedMeta,
+              wasDuplicate: true,
+              duplicatesCount: group.length,
+              duplicateList: group.map((p) => p.original),
+            };
+          }
+          return latest;
+        });
+      }
+
+      // Attendance Calculations Engine
+      function calculateAttendance() {
+        if (!excelRows) return;
+
+        const dateRow = excelRows[3];
+        daysInfo = [];
+        let maxDays = 0;
+
+        // Parse days header row
+        for (let col = 1; col <= 31; col++) {
+          const cellVal = dateRow[col];
+          if (!cellVal) continue;
+          const parts = String(cellVal).split('\n');
+          const dayNum = parseInt(parts[0], 10);
+          const dayOfWeekStr = parts[1] || '';
+          const isWeekend = dayOfWeekStr.includes('星期六') || dayOfWeekStr.includes('星期日');
+
+          daysInfo[col] = {
+            dayNum,
+            dayOfWeekStr,
+            isWeekend,
+          };
+          if (dayNum > maxDays) maxDays = dayNum;
+        }
+        parsedDaysCount = maxDays;
+
+        // Auto-detect Holidays (weekdays where ALL employees have empty punches)
+        const empWorkdayPunchesCount = {}; // dayNum -> count of employees with punches
+        for (let d = 1; d <= parsedDaysCount; d++) {
+          empWorkdayPunchesCount[d] = 0;
+        }
+
+        // Pre-scan for auto holiday detection
+        for (let r = 4; r < excelRows.length; r++) {
+          const row = excelRows[r];
+          if (!row || !row[0]) continue;
+          for (let d = 1; d <= parsedDaysCount; d++) {
+            const cellVal = row[d];
+            if (cellVal && cellVal !== '--') {
+              empWorkdayPunchesCount[d]++;
+            }
+          }
+        }
+
+        // Add auto-detected holidays (weekdays where punches count is 0)
+        const autoHolidays = [];
+        for (let d = 1; d <= parsedDaysCount; d++) {
+          const dInfo = daysInfo[d];
+          if (dInfo && !dInfo.isWeekend) {
+            if (empWorkdayPunchesCount[d] === 0) {
+              autoHolidays.push(getDateStr(d));
+            }
+          }
+        }
+
+        // Combine user holidays with auto detected ones (unique list)
+        const activeHolidays = [...new Set([...config.holidays, ...autoHolidays])];
+
+        // Update config holidays input to show the auto detected ones too
+        document.getElementById('cfgHolidays').value = activeHolidays.join(', ');
+
+        employeesData = [];
+
+        // Calculate for each employee row
+        for (let r = 4; r < excelRows.length; r++) {
+          const row = excelRows[r];
+          if (!row || !row[0]) continue;
+          const name = String(row[0]).trim();
+
+          const rawPunches = {};
+          for (let col = 1; col <= parsedDaysCount; col++) {
+            rawPunches[col] = parseCellPunches(row[col]);
+          }
+
+          const parsedPunches = {};
+          for (let d = 1; d <= parsedDaysCount; d++) {
+            parsedPunches[d] = deduplicatePunches(rawPunches[d] || []);
+          }
+
+          // Overnight parsing
+          const finalPunches = {};
+          for (let d = 1; d <= parsedDaysCount; d++) {
+            finalPunches[d] = { regular: [], overnight: [] };
+          }
+
+          for (let d = 1; d <= parsedDaysCount; d++) {
+            const dayPunches = parsedPunches[d] || [];
+            for (const p of dayPunches) {
+              if (p.minutes < 360) {
+                // 00:00 - 06:00
+                if (d > 1) {
+                  finalPunches[d - 1].overnight.push(p);
+                } else {
+                  finalPunches[d].regular.push(p);
+                }
+              } else {
+                finalPunches[d].regular.push(p);
+              }
+            }
+          }
+
+          const dailyAttendance = [];
+          let totalLateMinutes = 0;
+          let totalEarlyMinutes = 0;
+          let totalOtMinutes = 0;
+          let totalMissingCount = 0;
+
+          const lateDetails = [];
+          const earlyDetails = [];
+          const otDetails = [];
+          const missingDetails = [];
+
+          const workStartM = timeToMinutes(config.workStart); // 600
+          const lunchStartM = timeToMinutes(config.lunchStart); // 750
+          const lunchEndM = timeToMinutes(config.lunchEnd); // 810
+          const workEndM = timeToMinutes(config.workEnd); // 1140
+          const eveningOtStartM = timeToMinutes(config.eveningOtStart); // 1200
+          const morningOtLimitM = timeToMinutes(config.morningOtLimit); // 570
+          const morningShiftM = lunchStartM - workStartM; // 150
+
+          for (let d = 1; d <= parsedDaysCount; d++) {
+            const dayInfo = daysInfo[d];
+            if (!dayInfo) continue;
+
+            const dateStr = getDateStr(d);
+
+            const regular = finalPunches[d].regular;
+            const overnight = finalPunches[d].overnight;
+
+            const candidates = [];
+            for (const p of regular) {
+              candidates.push({
+                ...p,
+                absMinutes: p.minutes,
+                isOvernight: false,
+              });
+            }
+            for (const p of overnight) {
+              candidates.push({
+                ...p,
+                absMinutes: p.minutes + 1440,
+                isOvernight: true,
+              });
+            }
+
+            candidates.sort((a, b) => a.absMinutes - b.absMinutes);
+
+            let onDuty = null;
+            let offDuty = null;
+
+            const isWeekend = dayInfo.isWeekend;
+            const isHoliday = activeHolidays.includes(dateStr);
+            const isWorkday =
+              (isWeekend && config.specialWorkdays.includes(dateStr)) || (!isWeekend && !isHoliday);
+
+            if (candidates.length >= 2) {
+              onDuty = candidates[0];
+              offDuty = candidates[candidates.length - 1];
+            } else if (candidates.length === 1) {
+              const single = candidates[0];
+              if (single.absMinutes < 870) {
+                onDuty = single;
+                offDuty = { isMissing: true };
+              } else {
+                onDuty = { isMissing: true };
+                offDuty = single;
+              }
+            } else {
+              if (isWorkday) {
+                onDuty = { isMissing: true };
+                offDuty = { isMissing: true };
+              }
+            }
+
+            let lateMinutes = 0;
+            let earlyMinutes = 0;
+            let otMinutes = 0;
+            let isMissing = false;
+            const dayIssues = [];
+
+            if (isWorkday) {
+              if (onDuty && offDuty) {
+                if (onDuty.isMissing && offDuty.isMissing) {
+                  isMissing = true;
+                  totalMissingCount += 2;
+                  dayIssues.push('上下班均未打卡');
+                  missingDetails.push({
+                    dayNum: d,
+                    dateStr,
+                    type: 'both',
+                    desc: '工作日上下班均未打卡',
+                  });
+                } else if (onDuty.isMissing) {
+                  isMissing = true;
+                  totalMissingCount += 1;
+                  dayIssues.push('上班未打卡');
+                  missingDetails.push({ dayNum: d, dateStr, type: 'in', desc: '工作日上班未打卡' });
+                } else if (offDuty.isMissing) {
+                  isMissing = true;
+                  totalMissingCount += 1;
+                  dayIssues.push('下班未打卡');
+                  missingDetails.push({
+                    dayNum: d,
+                    dateStr,
+                    type: 'out',
+                    desc: '工作日下班未打卡',
+                  });
+                } else {
+                  // 1. Late / Leave calculation
+                  const tIn = onDuty.minutes;
+                  if (tIn > workStartM) {
+                    if (tIn <= lunchStartM) {
+                      lateMinutes = tIn - workStartM;
+                    } else {
+                      lateMinutes = tIn - lunchEndM + morningShiftM;
+                    }
+                    totalLateMinutes += lateMinutes;
+                    const hours = minutesToHours(lateMinutes);
+                    lateDetails.push({
+                      dayNum: d,
+                      dateStr,
+                      timeStr: onDuty.timeStr,
+                      minutes: lateMinutes,
+                      hours,
+                      desc: `${d}号${onDuty.timeStr}上班，调休 ${lateMinutes}分钟 (${hours}小时)`,
+                    });
+                  }
+
+                  // 2. Early leaving calculation
+                  const tOutAbs = offDuty.absMinutes;
+                  if (tOutAbs < workEndM) {
+                    earlyMinutes = workEndM - tOutAbs;
+                    totalEarlyMinutes += earlyMinutes;
+                    const hours = minutesToHours(earlyMinutes);
+                    earlyDetails.push({
+                      dayNum: d,
+                      dateStr,
+                      timeStr: offDuty.timeStr,
+                      minutes: earlyMinutes,
+                      hours,
+                      desc: `${d}号${offDuty.timeStr}下班，提前下班 ${earlyMinutes}分钟 (${hours}小时)`,
+                    });
+                  }
+
+                  // 3. Workday Overtime calculation
+                  let dayOt = 0;
+                  if (tOutAbs > eveningOtStartM) {
+                    dayOt += tOutAbs - eveningOtStartM;
+                  }
+                  if (tIn <= morningOtLimitM) {
+                    dayOt += workStartM - tIn;
+                  }
+
+                  if (dayOt > 0) {
+                    otMinutes = dayOt;
+                    totalOtMinutes += otMinutes;
+                    const hours = minutesToHours(otMinutes);
+
+                    let otDesc = `${d}号`;
+                    if (tIn <= morningOtLimitM) {
+                      otDesc += `${onDuty.timeStr}上班(早加班${workStartM - tIn}m)`;
+                    }
+                    if (tOutAbs > eveningOtStartM) {
+                      if (tIn <= morningOtLimitM) otDesc += '，';
+                      otDesc += `${offDuty.timeStr}下班(晚加班${tOutAbs - eveningOtStartM}m)`;
+                    }
+                    otDesc += `，加班共 ${otMinutes}分钟 (${hours}小时)`;
+
+                    otDetails.push({
+                      dayNum: d,
+                      dateStr,
+                      minutes: otMinutes,
+                      hours,
+                      desc: otDesc,
+                    });
+                  }
+                }
+              }
+            } else {
+              // Rest Day Overtime
+              if (onDuty && offDuty && !onDuty.isMissing && !offDuty.isMissing) {
+                otMinutes = offDuty.absMinutes - onDuty.absMinutes;
+                totalOtMinutes += otMinutes;
+                const hours = minutesToHours(otMinutes);
+
+                let otDesc = `${d}号（${dayInfo.dayOfWeekStr}）`;
+                otDesc += `${onDuty.timeStr}上班，${offDuty.timeStr}下班，加班 ${otMinutes}分钟 (${hours}小时)`;
+
+                otDetails.push({
+                  dayNum: d,
+                  dateStr,
+                  minutes: otMinutes,
+                  hours,
+                  desc: otDesc,
+                });
+              } else if (onDuty && !onDuty.isMissing) {
+                isMissing = true;
+                totalMissingCount += 1;
+                missingDetails.push({
+                  dayNum: d,
+                  dateStr,
+                  type: 'weekend_in',
+                  desc: `周末仅打卡一次: ${onDuty.timeStr}`,
+                });
+              } else if (offDuty && !offDuty.isMissing) {
+                isMissing = true;
+                totalMissingCount += 1;
+                missingDetails.push({
+                  dayNum: d,
+                  dateStr,
+                  type: 'weekend_out',
+                  desc: `周末仅打卡一次: ${offDuty.timeStr}`,
+                });
+              }
+            }
+
+            dailyAttendance.push({
+              dayNum: d,
+              dateStr,
+              dayOfWeekStr: dayInfo.dayOfWeekStr,
+              isWorkday,
+              isWeekend,
+              isHoliday,
+              onDuty: onDuty && !onDuty.isMissing ? onDuty : null,
+              offDuty: offDuty && !offDuty.isMissing ? offDuty : null,
+              isMissing,
+              dayIssues,
+              lateMinutes,
+              earlyMinutes,
+              otMinutes,
+              candidates,
+              rawString: row[d] || '--',
+            });
+          }
+
+          const netOtMinutes = totalOtMinutes - totalEarlyMinutes - totalLateMinutes;
+
+          employeesData.push({
+            name,
+            dailyAttendance,
+            totalLateMinutes,
+            totalEarlyMinutes,
+            totalOtMinutes,
+            netOtMinutes,
+            totalLateHours: minutesToHours(totalLateMinutes),
+            totalEarlyHours: minutesToHours(totalEarlyMinutes),
+            totalOtHours: minutesToHours(totalOtMinutes),
+            netOtHours: minutesToHours(netOtMinutes),
+            totalMissingCount,
+            lateDetails,
+            earlyDetails,
+            otDetails,
+            missingDetails,
+          });
+        }
+
+        // Render employees selector in sidebar
+        renderSidebar();
+      }
+
+      function renderSidebar() {
+        const list = document.getElementById('employeeList');
+        list.innerHTML = '';
+
+        employeesData.forEach((emp, index) => {
+          const item = document.createElement('li');
+          item.className = 'employee-item' + (index === currentEmployeeIndex ? ' active' : '');
+          item.onclick = () => selectEmployee(index);
+
+          let badgeHtml = '';
+          if (emp.totalMissingCount > 0) {
+            badgeHtml = `<span class="badge badge-danger">异常 ${emp.totalMissingCount}</span>`;
+          } else {
+            badgeHtml = `<span class="badge badge-ot">${emp.netOtHours}h</span>`;
+          }
+
+          item.innerHTML = `<span>${emp.name}</span>` + badgeHtml;
+          list.appendChild(item);
+        });
+      }
+
+      function selectEmployee(index) {
+        currentEmployeeIndex = index;
+        const items = document.querySelectorAll('.employee-item');
+        items.forEach((item, idx) => {
+          if (idx === index) item.classList.add('active');
+          else item.classList.remove('active');
+        });
+        renderEmployee(index);
+      }
+
+      function renderEmployee(index) {
+        const emp = employeesData[index];
+        if (!emp) return;
+
+        // Render metrics cards
+        const metricsGrid = document.getElementById('metricsGrid');
+        metricsGrid.innerHTML = `
+        <div class="card-metric primary">
+          <div class="metric-label">总加班时长</div>
+          <div class="metric-value">${emp.totalOtHours}<span>小时</span></div>
+          <div class="metric-subtext">共计 ${emp.totalOtMinutes} 分钟</div>
+        </div>
+        <div class="card-metric warning">
+          <div class="metric-label">迟到 / 调休时长</div>
+          <div class="metric-value">${emp.totalLateHours}<span>小时</span></div>
+          <div class="metric-subtext">共计 ${emp.totalLateMinutes} 分钟</div>
+        </div>
+        <div class="card-metric info">
+          <div class="metric-label">提前下班时长</div>
+          <div class="metric-value">${emp.totalEarlyHours}<span>小时</span></div>
+          <div class="metric-subtext">共计 ${emp.totalEarlyMinutes} 分钟</div>
+        </div>
+        <div class="card-metric ${emp.netOtMinutes >= 0 ? 'success' : 'danger'}">
+          <div class="metric-label">净加班时长</div>
+          <div class="metric-value">${emp.netOtHours}<span>小时</span></div>
+          <div class="metric-subtext">共计 ${emp.netOtMinutes} 分钟 (加班 - 迟到 - 提前)</div>
+        </div>
+      `;
+
+        // Render calendar grid
+        const calendarGrid = document.getElementById('calendarGrid');
+        const cells = calendarGrid.querySelectorAll('.calendar-day-cell');
+        cells.forEach((c) => c.remove());
+
+        // Get weekday index of day 1 to render spacing empty cells
+        const day1 = emp.dailyAttendance[0];
+        const weekdayMap = {
+          星期一: 0,
+          星期二: 1,
+          星期三: 2,
+          星期四: 3,
+          星期五: 4,
+          星期六: 5,
+          星期日: 6,
+        };
+        const emptyCount = weekdayMap[day1.dayOfWeekStr] || 0;
+
+        for (let i = 0; i < emptyCount; i++) {
+          const emptyCell = document.createElement('div');
+          emptyCell.className = 'calendar-day-cell empty';
+          calendarGrid.appendChild(emptyCell);
+        }
+
+        // Render day cells
+        emp.dailyAttendance.forEach((day) => {
+          const cell = document.createElement('div');
+          let classes = 'calendar-day-cell';
+          if (day.isWeekend) classes += ' weekend';
+          if (day.isHoliday) classes += ' holiday';
+          cell.className = classes;
+
+          let typeBadge = '';
+          if (day.isHoliday) {
+            typeBadge = '<span class="day-type holiday-rest">放假</span>';
+          } else if (day.isWeekend) {
+            typeBadge = '<span class="day-type weekend-rest">周末</span>';
+          } else {
+            typeBadge = '<span class="day-type workday">工作</span>';
+          }
+
+          let punchesHtml = '';
+          if (day.isMissing) {
+            punchesHtml += '<div class="punch-record missing">打卡异常</div>';
+          } else {
+            if (day.onDuty) {
+              punchesHtml += `<div class="punch-record"><span>上班:</span> <strong>${day.onDuty.timeStr}</strong></div>`;
+            }
+            if (day.offDuty) {
+              let label = day.offDuty.isOvernight ? '次日:' : '下班:';
+              punchesHtml += `<div class="punch-record"><span>${label}</span> <strong>${day.offDuty.timeStr}</strong></div>`;
+            }
+          }
+
+          let badgesHtml = '';
+          if (day.otMinutes > 0) {
+            badgesHtml += `<span class="badge-tag ot">加班 +${day.otMinutes}m</span>`;
+          }
+          if (day.lateMinutes > 0) {
+            badgesHtml += `<span class="badge-tag late">迟到 -${day.lateMinutes}m</span>`;
+          }
+          if (day.earlyMinutes > 0) {
+            badgesHtml += `<span class="badge-tag early">早退 -${day.earlyMinutes}m</span>`;
+          }
+          if (day.dayIssues && day.dayIssues.length > 0) {
+            day.dayIssues.forEach((issue) => {
+              badgesHtml += `<span class="badge-tag missing">${issue}</span>`;
+            });
+          }
+
+          const hasDuplicates = day.candidates && day.candidates.some((c) => c.wasDuplicate);
+          if (hasDuplicates) {
+            badgesHtml += `<span class="badge-tag duplicate">已去重</span>`;
+          }
+
+          cell.innerHTML = `
+          <div class="day-num-header">
+            <span class="day-num">${day.dayNum}号</span>
+            ${typeBadge}
+          </div>
+          <div class="day-punches">
+            ${punchesHtml || '<div style="color:#94a3b8;font-style:italic;text-align:center;">未打卡</div>'}
+          </div>
+          <div class="day-badges">
+            ${badgesHtml}
+          </div>
+        `;
+          calendarGrid.appendChild(cell);
+        });
+
+        // Render calculations formula box
+        const formulaContainer = document.getElementById('formulaBoxContainer');
+        formulaContainer.innerHTML = `
+        <div class="formula-box">
+          <div class="formula-title">${emp.name} ${parsedMonth}月份加班汇总公式 (精确到分钟)</div>
+          <div class="formula-expr">
+            <span>总加班 ${emp.totalOtMinutes}m (${emp.totalOtHours}h)</span>
+            <span>-</span>
+            <span>提前下班 ${emp.totalEarlyMinutes}m (${emp.totalEarlyHours}h)</span>
+            <span>-</span>
+            <span>调休迟到 ${emp.totalLateMinutes}m (${emp.totalLateHours}h)</span>
+            <span>=</span>
+            <span class="result-highlight">${emp.netOtMinutes}分钟 (${emp.netOtHours}小时)</span>
+          </div>
+          <div class="formula-desc">
+            计算逻辑：以分钟为单位加减，汇总为净加班分钟，最后除以 60 换算为小时（保留两位小数）。<br>
+            * 若净时间为正数，代表该月需计发加班费；若为负数，代表需扣除相应调休额度。
+          </div>
+        </div>
+      `;
+
+        // Render lists
+        const otList = document.getElementById('otList');
+        if (emp.otDetails.length === 0) {
+          otList.innerHTML = '<div class="empty-state">本月无加班记录</div>';
+        } else {
+          otList.innerHTML = emp.otDetails
+            .map(
+              (d, i) => `
+          <div class="exception-item ot">
+            <div class="dot"></div>
+            <div class="content">${i + 1}. ${d.desc}</div>
+          </div>
+        `
+            )
+            .join('');
+        }
+
+        const leaveList = document.getElementById('leaveList');
+        const lateAndEarly = [
+          ...emp.lateDetails.map((d) => ({ ...d, type: 'late' })),
+          ...emp.earlyDetails.map((d) => ({ ...d, type: 'early' })),
+        ];
+        lateAndEarly.sort((a, b) => a.dayNum - b.dayNum);
+
+        if (lateAndEarly.length === 0) {
+          leaveList.innerHTML = '<div class="empty-state">本月无迟到或早退记录</div>';
+        } else {
+          leaveList.innerHTML = lateAndEarly
+            .map(
+              (d, i) => `
+          <div class="exception-item ${d.type}">
+            <div class="dot"></div>
+            <div class="content">${i + 1}. ${d.desc}</div>
+          </div>
+        `
+            )
+            .join('');
+        }
+
+        const missingList = document.getElementById('missingList');
+        const missingCard = document.getElementById('missingSectionCard');
+        if (emp.missingDetails.length === 0) {
+          missingCard.style.display = 'none';
+        } else {
+          missingCard.style.display = 'block';
+          missingList.innerHTML = emp.missingDetails
+            .map(
+              (d, i) => `
+          <div class="exception-item missing">
+            <div class="dot"></div>
+            <div class="content">${i + 1}. ${d.dateStr} 打卡异常：${d.desc}</div>
+          </div>
+        `
+            )
+            .join('');
+        }
+      }
+    </script>
+  </body>
+</html>

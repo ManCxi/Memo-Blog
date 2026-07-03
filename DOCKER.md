@@ -11,6 +11,7 @@ docker build -t memo-blog:latest .
 ```
 
 ### 编译说明
+
 - 项目使用 **多阶段构建 (Multi-stage Build)**，有效减小最终镜像体积（仅保留运行时必要的依赖）。
 - 基础镜像采用 `node:24-alpine`，运行环境极简且安全。
 - 编译过程中会自动安装 `python3`, `make`, `g++` 以支持原生模块（如 `sqlite3`, `sharp`）的编译，但在最终运行镜像中这些工具会被移除。
@@ -18,6 +19,7 @@ docker build -t memo-blog:latest .
 ## 2. 运行容器
 
 ### 基础运行
+
 使用以下命令启动容器。建议将主机的 `./uploads` 目录挂载到容器中，以确保上传的图片在容器重启后不会丢失。
 
 ```bash
@@ -31,14 +33,17 @@ docker run -d \
 ```
 
 ### 环境变量传递
+
 你可以通过 `-e` 或 `--env-file` 传递环境变量。
 
 常用变量：
+
 - `NODE_ENV=production`
 - `DB_DIALECT=sqlite` (或 mysql/postgres)
 - `REDIS_ENABLED=false` (不连接外部 Redis 时建议设为 false)
 
 ### 持久化数据库 (SQLite 模式)
+
 如果你使用 SQLite 数据库，也需要挂载数据库文件：
 
 ```bash
@@ -61,7 +66,7 @@ services:
     build: .
     restart: always
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ./uploads:/app/uploads
       - ./database.sqlite:/app/database.sqlite
@@ -72,11 +77,13 @@ services:
 ```
 
 然后运行：
+
 ```bash
 docker-compose up -d
 ```
 
 ## 4. 镜像优化建议
+
 - 最终运行用户为 `node` 非 root，符合安全规范。
 - 端口 3000 已在 Dockerfile 中通过 `EXPOSE` 声明。
 - 默认启动命令为 `npm run start`。

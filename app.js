@@ -44,6 +44,8 @@ app.use(
         'img-src': ["'self'", 'data:', 'https:'],
         'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // 根据富文本编辑器的需求调整
         'script-src-attr': ["'unsafe-inline'"], // 允许 inline event handlers (onclick 等)
+        'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        'font-src': ["'self'", 'https://fonts.gstatic.com'],
       },
     },
   })

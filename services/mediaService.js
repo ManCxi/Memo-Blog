@@ -12,7 +12,19 @@ function getFileType(mimetype, filename) {
     const imgExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico', '.bmp', '.jfif'];
     const vidExts = ['.mp4', '.webm', '.avi', '.mov', '.mkv'];
     const audExts = ['.mp3', '.wav', '.ogg', '.flac', '.aac'];
-    const docExts = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.md'];
+    const docExts = [
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.txt',
+      '.md',
+      '.html',
+      '.htm',
+    ];
     if (imgExts.includes(ext)) return 'image';
     if (vidExts.includes(ext)) return 'video';
     if (audExts.includes(ext)) return 'audio';
@@ -28,6 +40,7 @@ function getFileType(mimetype, filename) {
     'application/vnd.openxmlformats',
     'text/plain',
     'text/markdown',
+    'text/html',
   ];
   if (docMimes.some((m) => mimetype.startsWith(m))) return 'document';
   return 'other';

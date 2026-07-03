@@ -56,4 +56,3 @@ function closePageSettings() {
   } catch (_) {}
   document.body.classList.remove('article-settings-open');
 }
-

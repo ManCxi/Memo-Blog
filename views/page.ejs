@@ -2,102 +2,144 @@
 <%- include('partials/nav') %>
 
 <main class="page-container animate-fade-in-up">
-  <!-- Breadcrumb -->
-  <div class="breadcrumb">
-    <a href="/">🏠 首页</a>
-    <span class="breadcrumb-sep">›</span>
-    <span class="breadcrumb-current"><%= page.title %></span>
-  </div>
+  <% if (page.isHtmlCode) { %>
+    <!-- HTML 代码模式：自适应容器最大宽度，与顶栏和底栏完美对齐 -->
+    <div id="articleContent" style="width: 100%;">
+      <iframe id="custom-page-iframe" style="width: 100%; border: none; overflow: hidden; display: block; border-radius: var(--border-radius-xl); box-shadow: var(--surface-shadow-2);" scrolling="no"></iframe>
+      <template id="iframe-content-source"><%- contentHtml %></template>
+      <script>
+        window.addEventListener('DOMContentLoaded', () => {
+          const iframe = document.getElementById('custom-page-iframe');
+          const template = document.getElementById('iframe-content-source');
+          if (iframe && template) {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write('<style>body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; color: #333; }</style>');
+            doc.write(template.innerHTML);
+            doc.write('<script>' +
+              '(function() {' +
+              '  function notifyParent() {' +
+              '    const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);' +
+              '    if (window.parent && window.parent.document) {' +
+              '      const iframe = window.parent.document.getElementById("custom-page-iframe");' +
+              '      if (iframe) {' +
+              '        iframe.style.height = height + "px";' +
+              '      }' +
+              '    }' +
+              '  }' +
+              '  window.addEventListener("load", notifyParent);' +
+              '  window.addEventListener("resize", notifyParent);' +
+              '  if (window.ResizeObserver) {' +
+              '    new ResizeObserver(notifyParent).observe(document.body);' +
+              '  }' +
+              '  setInterval(notifyParent, 300);' +
+              '})();' +
+              '</' + 'script>'
+            );
+            doc.close();
+          }
+        });
+      </script>
+    </div>
+  <% } else { %>
+    <!-- 普通 Markdown/富文本模式：套用卡片和面包屑 -->
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="/">🏠 首页</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current"><%= page.title %></span>
+    </div>
 
-  <div class="article-layout">
-    <!-- Main content -->
-    <div class="article-main-col">
-      <div class="article-detail-card">
-        <div class="article-detail-body">
-          <h1 class="article-detail-title"><%= page.title %></h1>
+    <div class="article-layout">
+      <!-- Main content -->
+      <div class="article-main-col">
+        <div class="article-detail-card">
+          <div class="article-detail-body">
+            <h1 class="article-detail-title"><%= page.title %></h1>
 
-          <!-- Meta (Optional for pages, keeping view count) -->
-          <div class="article-detail-meta">
-            <span>📅 <%= new Date(page.createdAt).toLocaleDateString('zh-CN') %></span>
-            <span>👁️ <%= totalViews %> 次阅读</span>
-          </div>
+            <!-- Meta (Optional for pages, keeping view count) -->
+            <div class="article-detail-meta">
+              <span>📅 <%= new Date(page.createdAt).toLocaleDateString('zh-CN') %></span>
+              <span>👁️ <%= totalViews %> 次阅读</span>
+            </div>
 
-          <!-- Content -->
-          <div class="prose article-prose" id="articleContent">
-            <%- contentHtml %>
+            <!-- Content -->
+            <div class="prose article-prose" id="articleContent">
+              <%- contentHtml %>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Sidebar: TOC -->
+      <aside class="article-aside-sticky">
+        <!-- Table of contents -->
+        <div class="toc-card" id="toc" style="display:none;">
+          <div class="toc-title">目录</div>
+          <div id="tocList" class="toc-list"></div>
+        </div>
+
+        <!-- Back to top -->
+        <div class="toc-backtop-wrap">
+          <button class="toc-backtop-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+            ⬆️ 回到顶部
+          </button>
+        </div>
+      </aside>
     </div>
 
-    <!-- Sidebar: TOC -->
-    <aside class="article-aside-sticky">
-      <!-- Table of contents -->
-      <div class="toc-card" id="toc" style="display:none;">
-        <div class="toc-title">目录</div>
-        <div id="tocList" class="toc-list"></div>
-      </div>
+    <script>
+    // TOC 目录自动生成 (同文章页)
+    (function() {
+      const content = document.getElementById('articleContent');
+      const tocList = document.getElementById('tocList');
+      const toc = document.getElementById('toc');
+      if (!content || !tocList) return;
+      const headings = content.querySelectorAll('h2, h3, h4');
+      if (headings.length < 2) return;
+      toc.style.display = '';
+      const anchors = [];
+      headings.forEach((h, i) => {
+        const id = 'h-' + i;
+        h.id = id;
+        const a = document.createElement('a');
+        a.href = '#' + id;
+        a.textContent = h.textContent;
+        a.dataset.id = id;
+        const level = h.tagName === 'H2' ? 2 : h.tagName === 'H3' ? 3 : 4;
+        a.className = `toc-link toc-level-${level}`;
+        a.addEventListener('click', e => {
+          e.preventDefault();
+          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        tocList.appendChild(a);
+        anchors.push({ id, el: h, a });
+      });
 
-      <!-- Back to top -->
-      <div class="toc-backtop-wrap">
-        <button class="toc-backtop-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">
-          ⬆️ 回到顶部
-        </button>
-      </div>
-    </aside>
-  </div>
-</main>
-
-<script>
-// TOC 目录自动生成 (同文章页)
-(function() {
-  const content = document.getElementById('articleContent');
-  const tocList = document.getElementById('tocList');
-  const toc = document.getElementById('toc');
-  if (!content || !tocList) return;
-  const headings = content.querySelectorAll('h2, h3, h4');
-  if (headings.length < 2) return;
-  toc.style.display = '';
-  const anchors = [];
-  headings.forEach((h, i) => {
-    const id = 'h-' + i;
-    h.id = id;
-    const a = document.createElement('a');
-    a.href = '#' + id;
-    a.textContent = h.textContent;
-    a.dataset.id = id;
-    const level = h.tagName === 'H2' ? 2 : h.tagName === 'H3' ? 3 : 4;
-    a.className = `toc-link toc-level-${level}`;
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    tocList.appendChild(a);
-    anchors.push({ id, el: h, a });
-  });
-
-  let activeId = null;
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const id = entry.target.id;
-        if (activeId !== id) {
-          anchors.forEach(({ id: aid, a }) => {
-            if (aid === id) {
-              a.classList.add('active');
-              // 自动滚动目录，确保当前项可见
-              a.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } else {
-              a.classList.remove('active');
+      let activeId = null;
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            if (activeId !== id) {
+              anchors.forEach(({ id: aid, a }) => {
+                if (aid === id) {
+                  a.classList.add('active');
+                  // 自动滚动目录，确保当前项可见
+                  a.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                  a.classList.remove('active');
+                }
+              });
+              activeId = id;
             }
-          });
-          activeId = id;
-        }
-      }
-    });
-  }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
-  headings.forEach(h => observer.observe(h));
-})();
-</script>
+          }
+        });
+      }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+      headings.forEach(h => observer.observe(h));
+    })();
+    </script>
+  <% } %>
+</main>
 
 <%- include('partials/footer') %>

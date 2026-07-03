@@ -14,11 +14,18 @@ const PAGE_SIZE = 15;
 function renderArticleContent(content, editorType) {
   const raw = String(content || '');
   if (!raw.trim()) return '';
-  if (editorType === 'markdown') return marked(raw);
 
-  const hasRichHtml = /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(raw);
-  if (hasRichHtml) return raw;
-  return marked(raw);
+  let html = '';
+  if (editorType === 'markdown') {
+    html = marked(raw);
+  } else {
+    const hasRichHtml =
+      /<\/?(p|div|h[1-6]|pre|code|blockquote|ul|ol|li|table|thead|tbody|tr|td|th|img|figure|span|br)\b/i.test(
+        raw
+      );
+    html = hasRichHtml ? raw : marked(raw);
+  }
+  return sanitize(html);
 }
 
 // compressImageIfPossible moved to services/mediaService.js
@@ -84,8 +91,18 @@ exports.createPage = async (req, res) => {
 // 新建文章保存
 exports.create = async (req, res) => {
   try {
-    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt, editorType } =
-      req.body;
+    const {
+      title,
+      content,
+      summary,
+      CategoryId,
+      status,
+      pinned,
+      tagIds,
+      cover,
+      publishedAt,
+      editorType,
+    } = req.body;
     let uploadedCover = '';
     if (req.file) {
       const compressedCover = await compressImageIfPossible(req.file.path, req.file.mimetype);
@@ -114,7 +131,11 @@ exports.create = async (req, res) => {
       title,
       slug,
       content: sanitizedContent,
-      summary: sanitize(summary) || (editorType === 'markdown' ? content.slice(0, 200) : sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, '')),
+      summary:
+        sanitize(summary) ||
+        (editorType === 'markdown'
+          ? content.slice(0, 200)
+          : sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, '')),
       cover: cover || uploadedCover,
       CategoryId: CategoryId || null,
       UserId: req.session.user.id,
@@ -182,8 +203,18 @@ exports.update = async (req, res) => {
     const article = await Article.findByPk(req.params.id);
     if (!article) return res.status(404).send('文章不存在');
 
-    const { title, content, summary, CategoryId, status, pinned, tagIds, cover, publishedAt, editorType } =
-      req.body;
+    const {
+      title,
+      content,
+      summary,
+      CategoryId,
+      status,
+      pinned,
+      tagIds,
+      cover,
+      publishedAt,
+      editorType,
+    } = req.body;
     let uploadedCover = '';
     if (req.file) {
       const compressedCover = await compressImageIfPossible(req.file.path, req.file.mimetype);
@@ -198,11 +229,16 @@ exports.update = async (req, res) => {
       finalStatus = status;
     }
 
-    const sanitizedContent = (editorType || article.editorType) === 'markdown' ? content : sanitize(content);
+    const sanitizedContent =
+      (editorType || article.editorType) === 'markdown' ? content : sanitize(content);
     const updateData = {
       title,
       content: sanitizedContent,
-      summary: sanitize(summary) || ((editorType || article.editorType) === 'markdown' ? content.slice(0, 200) : sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, '')),
+      summary:
+        sanitize(summary) ||
+        ((editorType || article.editorType) === 'markdown'
+          ? content.slice(0, 200)
+          : sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, '')),
       cover: cover || uploadedCover || article.cover,
       CategoryId: CategoryId || null,
       status: finalStatus,
@@ -307,7 +343,7 @@ exports.preview = async (req, res) => {
       prevArticle: null,
       nextArticle: null,
       sidebar,
-      isPreview: true
+      isPreview: true,
     });
   } catch (err) {
     console.error(err);

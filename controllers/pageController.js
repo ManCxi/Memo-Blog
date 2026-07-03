@@ -26,8 +26,13 @@ exports.show = async (req, res) => {
     let contentHtml = page.content;
     if (page.editorType === 'markdown') {
       contentHtml = marked(page.content);
+      contentHtml = sanitize(contentHtml);
+    } else if (page.isHtmlCode) {
+      // HTML 代码模式：直接输出，跳过 XSS 过滤
+      contentHtml = page.content;
+    } else {
+      contentHtml = sanitize(contentHtml);
     }
-    contentHtml = sanitize(contentHtml);
 
     res.render('page', {
       title: page.title,

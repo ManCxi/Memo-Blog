@@ -22,13 +22,13 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const allowedTypes = /jpeg|jpg|jfif|png|gif|webp/;
   const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mime = allowedTypes.test(file.mimetype);
   if (ext && mime) {
     cb(null, true);
   } else {
-    cb(new Error('只允许上传图片文件（jpg/png/gif/webp）'));
+    cb(new Error('只允许上传图片文件（jpg/png/gif/webp/jfif）'));
   }
 };
 

@@ -187,14 +187,8 @@
    * safe to mutate in a produce callback.
    */
 
-  var DRAFTABLE = hasSymbol
-    ? /*#__PURE__*/
-      Symbol.for('immer-draftable')
-    : '__$immer_draftable';
-  var DRAFT_STATE = hasSymbol
-    ? /*#__PURE__*/
-      Symbol.for('immer-state')
-    : '__$immer_state'; // Even a polyfilled Symbol might provide Symbol.iterator
+  var DRAFTABLE = hasSymbol ? /*#__PURE__*/ Symbol.for('immer-draftable') : '__$immer_draftable';
+  var DRAFT_STATE = hasSymbol ? /*#__PURE__*/ Symbol.for('immer-state') : '__$immer_state'; // Even a polyfilled Symbol might provide Symbol.iterator
 
   var iteratorSymbol$1 = (typeof Symbol != 'undefined' && Symbol.iterator) || '@@iterator';
 
@@ -377,10 +371,7 @@
 
   function get(thing, prop) {
     // @ts-ignore
-    return getArchtype(thing) === 2
-      ? /* Map */
-        thing.get(prop)
-      : thing[prop];
+    return getArchtype(thing) === 2 ? /* Map */ thing.get(prop) : thing[prop];
   }
 
   function set(thing, propOrOldValue, value) {
@@ -631,15 +622,9 @@
       // Although the original test case doesn't seem valid anyway, so if this in the way we can turn the next line
       // back to each(result, ....)
 
-      each$1(
-        state.type_ === 3
-          ? /* Set */
-            new Set(result)
-          : result,
-        function (key, childValue) {
-          return finalizeProperty(rootScope, state, result, key, childValue, path);
-        }
-      ); // everything inside is frozen, we can freeze here
+      each$1(state.type_ === 3 ? /* Set */ new Set(result) : result, function (key, childValue) {
+        return finalizeProperty(rootScope, state, result, key, childValue, path);
+      }); // everything inside is frozen, we can freeze here
 
       maybeFreeze(rootScope, result, false); // first time finalizing, let's create those patches
 
@@ -713,10 +698,7 @@
   function createProxyProxy(base, parent) {
     var isArray = Array.isArray(base);
     var state = {
-      type_: isArray
-        ? 1
-        : /* ProxyArray */
-          0,
+      type_: isArray ? 1 : /* ProxyArray */ 0,
       /* ProxyObject */
       // Track which produce call this is associated with.
       scope_: parent ? parent.scope_ : getCurrentScope(),
@@ -1211,10 +1193,7 @@
       set(copy, key, currentImpl(childValue));
     }); // In the future, we might consider freezing here, based on the current settings
 
-    return archType === 3
-      ? /* Set */
-        new Set(copy)
-      : copy;
+    return archType === 3 ? /* Set */ new Set(copy) : copy;
   }
 
   function copyHelper(value, archType) {
@@ -1275,10 +1254,7 @@
       var isArray = Array.isArray(base);
       var draft = createES5Draft(isArray, base);
       var state = {
-        type_: isArray
-          ? 5
-          : /* ES5Array */
-            4,
+        type_: isArray ? 5 : /* ES5Array */ 4,
         /* ES5Object */
         scope_: parent ? parent.scope_ : getCurrentScope(),
         modified_: false,
@@ -1469,10 +1445,7 @@
     }
 
     function hasChanges_(state) {
-      return state.type_ === 4
-        ? /* ES5Object */
-          hasObjectChanges(state)
-        : hasArrayChanges(state);
+      return state.type_ === 4 ? /* ES5Object */ hasObjectChanges(state) : hasArrayChanges(state);
     }
 
     function assertUnrevoked(

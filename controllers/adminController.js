@@ -91,7 +91,7 @@ exports.dashboard = async (req, res) => {
         order: [['updatedAt', 'DESC']],
         limit: 5,
         include: [{ association: 'category', attributes: ['name'] }],
-      })
+      }),
     ]);
 
     // 填充实时阅读量

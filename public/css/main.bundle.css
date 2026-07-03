@@ -6,35 +6,15 @@
 
 /* ── 1. Design Tokens ── */
 
-
 /* ── 2. Reset & Base ── */
-
 
 /* ── 3. Surface Utilities ── */
 
-
 /* ── 4. Layout ── */
-
-
-
-
 
 /* ── 5. Components ── */
 
-
-
-
-
-
-
-
-
-
-
-
-
 /* ── 6. Dark Mode ── */
-
 
 /* Bundled CSS - Do not edit directly */
 /* Source: ./base/tokens.css */
@@ -107,14 +87,8 @@ body {
   background: #ebebf0;
   color: var(--text-primary);
   font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    'SF Pro Text',
-    'PingFang SC',
-    'Hiragino Sans GB',
-    'Microsoft YaHei',
-    'Helvetica Neue',
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', sans-serif;
   font-size: 15px;
   line-height: 1.7;
   margin: 0;
@@ -2011,9 +1985,19 @@ img {
   color: var(--accent);
   background: var(--accent-tint);
 }
-.toc-level-2 { font-size: 13px; font-weight: 600; }
-.toc-level-3 { padding-left: 22px; font-size: 12px; }
-.toc-level-4 { padding-left: 34px; font-size: 12px; opacity: 0.9; }
+.toc-level-2 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.toc-level-3 {
+  padding-left: 22px;
+  font-size: 12px;
+}
+.toc-level-4 {
+  padding-left: 34px;
+  font-size: 12px;
+  opacity: 0.9;
+}
 .toc-backtop-wrap {
   margin-top: 16px;
   text-align: center;
@@ -2105,27 +2089,45 @@ img {
   overflow-x: hidden;
   word-break: break-word;
 }
-.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6,
-.article-prose h1, .article-prose h2, .article-prose h3, .article-prose h4, .article-prose h5, .article-prose h6 {
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6,
+.article-prose h1,
+.article-prose h2,
+.article-prose h3,
+.article-prose h4,
+.article-prose h5,
+.article-prose h6 {
   font-weight: 700;
   line-height: 1.35;
   margin: 2rem 0 1rem;
   letter-spacing: -0.3px;
   scroll-margin-top: 84px; /* Fix for fixed navbar (64px + 20px buffer) */
 }
-.prose h1 { font-size: 1.7rem; }
+.prose h1 {
+  font-size: 1.7rem;
+}
 .prose h2 {
   font-size: 1.35rem;
   padding-left: 14px;
   border-left: 4px solid var(--accent);
 }
-.prose h3 { font-size: 1.15rem; }
-.prose p { margin: 0 0 1.2rem; }
+.prose h3 {
+  font-size: 1.15rem;
+}
+.prose p {
+  margin: 0 0 1.2rem;
+}
 .prose a {
   color: #0a7aff;
   border-bottom: 1px dashed rgba(10, 122, 255, 0.4);
 }
-.prose a:hover { border-bottom-style: solid; }
+.prose a:hover {
+  border-bottom-style: solid;
+}
 .prose blockquote {
   border-left: 4px solid var(--surface-border);
   padding: 12px 20px;
@@ -2179,13 +2181,17 @@ img {
   background: var(--surface-3-bg);
   font-weight: 600;
 }
-.prose tr:nth-child(even) { background: rgba(236, 236, 241, 0.4); }
+.prose tr:nth-child(even) {
+  background: rgba(236, 236, 241, 0.4);
+}
 .prose ul,
 .prose ol {
   padding-left: 1.5rem;
   margin: 0 0 1.2rem;
 }
-.prose li { margin-bottom: 6px; }
+.prose li {
+  margin-bottom: 6px;
+}
 .prose hr {
   border: none;
   border-top: 1px solid var(--surface-border);
@@ -2225,9 +2231,15 @@ img {
     inset 0 1px 1px rgba(255, 255, 255, 0.25),
     0 1px 2px rgba(0, 0, 0, 0.35);
 }
-.code-chrome-dot--red { background: #ff5f57; }
-.code-chrome-dot--yellow { background: #febc2e; }
-.code-chrome-dot--green { background: #28c840; }
+.code-chrome-dot--red {
+  background: #ff5f57;
+}
+.code-chrome-dot--yellow {
+  background: #febc2e;
+}
+.code-chrome-dot--green {
+  background: #28c840;
+}
 .code-chrome-spacer {
   flex: 1;
   min-width: 8px;

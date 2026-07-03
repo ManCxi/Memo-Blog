@@ -55,55 +55,62 @@
           <label class="form-label">编辑器模式</label>
           <div class="d-flex align-items-center gap-16">
             <label class="checkbox-label-inline m-0">
-              <input type="radio" name="editorType" value="html" <%= !page || page.editorType === 'html' ? 'checked' : '' %> onchange="switchEditor('html')"> 富文本
+              <input type="radio" name="editorMode" value="html" <%= !page || (page.editorType === 'html' && !page.isHtmlCode) ? 'checked' : '' %> onchange="switchEditor('html')"> 富文本
             </label>
             <label class="checkbox-label-inline m-0">
-              <input type="radio" name="editorType" value="markdown" <%= page && page.editorType === 'markdown' ? 'checked' : '' %> onchange="switchEditor('markdown')"> Markdown
+              <input type="radio" name="editorMode" value="markdown" <%= page && page.editorType === 'markdown' ? 'checked' : '' %> onchange="switchEditor('markdown')"> Markdown
             </label>
-            <button type="button" class="btn btn-secondary btn-sm <%= page && page.editorType === 'markdown' ? '' : 'd-none' %>" id="importMdBtn" onclick="triggerMdImport()">📥 导入 MD</button>
+            <label class="checkbox-label-inline m-0">
+              <input type="radio" name="editorMode" value="raw" <%= page && page.isHtmlCode ? 'checked' : '' %> onchange="switchEditor('raw')"> HTML 代码
+            </label>
+            <button type="button" class="btn btn-secondary btn-sm <%= page && page.editorType === 'markdown' && !page.isHtmlCode ? '' : 'd-none' %>" id="importMdBtn" onclick="triggerMdImport()">📥 导入 MD</button>
             <input type="file" id="mdFileInput" style="display:none;" accept=".md" onchange="handleMdFile(this)">
           </div>
+          <input type="hidden" name="isHtmlCode" id="isHtmlCodeInput" value="<%= page && page.isHtmlCode ? '1' : '0' %>">
+          <input type="hidden" name="editorType" id="editorTypeInput" value="<%= page ? page.editorType : 'html' %>">
         </div>
 
         <div class="editor-container-wrap">
           <label class="form-label editor-inner-label">页面内容</label>
-          <div id="wang-editor-area" class="<%= page && page.editorType === 'markdown' ? 'd-none' : '' %>">
+          <div id="wang-editor-area" class="<%= page && (page.editorType === 'markdown' || page.isHtmlCode) ? 'd-none' : '' %>">
             <div id="editor-toolbar" class="editor-toolbar-wrap"></div>
             <div id="editor-container" class="editor-content-area"></div>
           </div>
-          <div id="markdown-editor-area" class="<%= !page || page.editorType === 'html' ? 'd-none' : '' %>">
+          <div id="markdown-editor-area" class="<%= !page || page.editorType === 'html' || page.isHtmlCode ? 'd-none' : '' %>">
             <textarea id="markdown-editor" class="markdown-textarea"></textarea>
+          </div>
+          <div id="raw-html-editor-area" class="<%= page && page.isHtmlCode ? '' : 'd-none' %>">
+            <textarea id="raw-html-editor" class="form-control" style="font-family: Consolas, Monaco, monospace; font-size: 14px; min-height: 500px; resize: vertical; line-height: 1.5; background: #fafafa; color: #333;" placeholder="在此直接编写 HTML/CSS/JS 代码..."><%= page && page.isHtmlCode ? page.content : '' %></textarea>
           </div>
           <textarea id="hiddenContent" name="content" style="display:none;"><%= page ? page.content : '' %></textarea>
         </div>
       </div>
     </div>
-  </div>
-</form>
 
-<!-- Settings drawer -->
-<div class="article-drawer-overlay" id="pageSettingsOverlay" onclick="closePageSettings()"></div>
-<aside class="article-settings-drawer" id="pageSettingsDrawer" aria-hidden="true" role="dialog" aria-label="页面设置">
-  <div class="article-settings-drawer-head">
-    <div class="article-settings-drawer-title">页面设置</div>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="closePageSettings()">关闭</button>
-  </div>
-  <div class="article-settings-drawer-body">
-    <div class="article-sidebar-wrap">
-      <div class="form-section">
-        <div class="form-section-title">路径设置</div>
-        <label class="form-label">自定义路径 (Slug)</label>
-        <div class="d-flex align-items-center gap-8">
-          <span style="color: var(--text-tertiary); font-size: 14px;">/p/</span>
-          <input type="text" name="slug" class="form-control form-control-sm"
-            placeholder="about-me"
-            value="<%= page ? page.slug : '' %>" required>
-        </div>
-        <div class="settings-desc" style="margin-top: 8px;">页面 URL 将是：domain.com/p/your-slug</div>
+    <!-- Settings drawer -->
+    <div class="article-drawer-overlay" id="pageSettingsOverlay" onclick="closePageSettings()"></div>
+    <aside class="article-settings-drawer" id="pageSettingsDrawer" aria-hidden="true" role="dialog" aria-label="页面设置">
+      <div class="article-settings-drawer-head">
+        <div class="article-settings-drawer-title">页面设置</div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closePageSettings()">关闭</button>
       </div>
-    </div>
-  </div>
-</aside>
+      <div class="article-settings-drawer-body">
+        <div class="article-sidebar-wrap">
+          <div class="form-section">
+            <div class="form-section-title">路径设置</div>
+            <label class="form-label">自定义路径 (Slug)</label>
+            <div class="d-flex align-items-center gap-8">
+              <span style="color: var(--text-tertiary); font-size: 14px;">/p/</span>
+              <input type="text" name="slug" class="form-control form-control-sm"
+                placeholder="about-me"
+                value="<%= page ? page.slug : '' %>" required>
+            </div>
+            <div class="settings-desc" style="margin-top: 8px;">页面 URL 将是：domain.com/p/your-slug</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+</form>
 
 <script src="/libs/marked/marked.min.js"></script>
 <script src="/libs/turndown/turndown.js"></script>
@@ -237,29 +244,45 @@ function initMarkdownEditor() {
 }
 
 function getEditorType() {
-  const selected = document.querySelector('input[name="editorType"]:checked');
+  const selected = document.querySelector('input[name="editorMode"]:checked');
   return selected ? selected.value : 'html';
 }
+
+let lastActiveMode = '<%= page && page.isHtmlCode ? "raw" : (page ? page.editorType : "html") %>';
 
 function switchEditor(type) {
   const wangArea = document.getElementById('wang-editor-area');
   const mdArea = document.getElementById('markdown-editor-area');
+  const rawArea = document.getElementById('raw-html-editor-area');
   const importBtn = document.getElementById('importMdBtn');
   const hiddenContent = document.getElementById('hiddenContent');
+  const rawTextarea = document.getElementById('raw-html-editor');
 
-  // Determine previous type based on visibility
-  const prevType = (wangArea && wangArea.classList.contains('d-none')) ? 'markdown' : 'html';
-  if (type === prevType) return;
+  const isHtmlCodeInput = document.getElementById('isHtmlCodeInput');
+  const editorTypeInput = document.getElementById('editorTypeInput');
 
-  // 1. Sync current content to hiddenContent
-  if (prevType === 'html' && window.editor) {
-    hiddenContent.value = window.editor.getHtml();
-  } else if (prevType === 'markdown') {
-    hiddenContent.value = easyMDE ? easyMDE.value() : document.getElementById('markdown-editor').value;
+  if (type === lastActiveMode) return;
+
+  // 如果从 HTML 代码模式切出，进行安全警告
+  if (lastActiveMode === 'raw') {
+    if (!confirm('从 "HTML代码" 模式切换到其他编辑器可能会导致您编写的自定义 CSS/JS 脚本或复杂 HTML 结构丢失，确定要切换吗？')) {
+      // 恢复单选钮选中状态
+      document.querySelector(`input[name="editorMode"][value="raw"]`).checked = true;
+      return;
+    }
   }
 
-  // 2. Perform Conversion
-  if (type === 'markdown' && prevType === 'html') {
+  // 1. 同步当前编辑器内容到 hiddenContent
+  if (lastActiveMode === 'html' && window.editor) {
+    hiddenContent.value = window.editor.getHtml();
+  } else if (lastActiveMode === 'markdown') {
+    hiddenContent.value = easyMDE ? easyMDE.value() : document.getElementById('markdown-editor').value;
+  } else if (lastActiveMode === 'raw' && rawTextarea) {
+    hiddenContent.value = rawTextarea.value;
+  }
+
+  // 2. 执行数据转换 (仅限于 html ⇔ markdown)
+  if (type === 'markdown' && lastActiveMode === 'html') {
     const TurndownService = window.TurndownService || window.Turndown;
     if (TurndownService) {
       const turndownService = new TurndownService({
@@ -309,7 +332,7 @@ function switchEditor(type) {
       markdown = markdown.replace(/\n{3,}/g, '\n\n').trim();
       hiddenContent.value = markdown;
     }
-  } else if (type === 'html' && prevType === 'markdown') {
+  } else if (type === 'html' && lastActiveMode === 'markdown') {
     const Marked = window.marked;
     if (Marked) {
       const markdown = hiddenContent.value;
@@ -322,6 +345,7 @@ function switchEditor(type) {
   if (type === 'markdown') {
     if (wangArea) wangArea.classList.add('d-none');
     if (mdArea) mdArea.classList.remove('d-none');
+    if (rawArea) rawArea.classList.add('d-none');
     if (importBtn) importBtn.classList.remove('d-none');
     if (easyMDE) {
       easyMDE.value(hiddenContent.value);
@@ -331,12 +355,27 @@ function switchEditor(type) {
       const ta = document.getElementById('markdown-editor');
       if (ta) ta.value = hiddenContent.value;
     }
-  } else {
+    isHtmlCodeInput.value = '0';
+    editorTypeInput.value = 'markdown';
+  } else if (type === 'html') {
     if (wangArea) wangArea.classList.remove('d-none');
     if (mdArea) mdArea.classList.add('d-none');
+    if (rawArea) rawArea.classList.add('d-none');
     if (importBtn) importBtn.classList.add('d-none');
     if (window.editor) window.editor.setHtml(hiddenContent.value);
+    isHtmlCodeInput.value = '0';
+    editorTypeInput.value = 'html';
+  } else if (type === 'raw') {
+    if (wangArea) wangArea.classList.add('d-none');
+    if (mdArea) mdArea.classList.add('d-none');
+    if (rawArea) rawArea.classList.remove('d-none');
+    if (importBtn) importBtn.classList.add('d-none');
+    if (rawTextarea) rawTextarea.value = hiddenContent.value;
+    isHtmlCodeInput.value = '1';
+    editorTypeInput.value = 'html';
   }
+
+  lastActiveMode = type;
 }
 
 
@@ -453,10 +492,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.editor = editor;
 
     document.getElementById('pageForm').addEventListener('submit', function() {
-      if (getEditorType() === 'markdown' && easyMDE) {
+      const mode = getEditorType();
+      if (mode === 'markdown' && easyMDE) {
         document.getElementById('hiddenContent').value = easyMDE.value();
-      } else if (getEditorType() === 'html' && editor) {
-        document.getElementById('hiddenContent').value = editor.getHtml();
+      } else if (mode === 'html' && window.editor) {
+        document.getElementById('hiddenContent').value = window.editor.getHtml();
+      } else if (mode === 'raw') {
+        const rawTextarea = document.getElementById('raw-html-editor');
+        if (rawTextarea) {
+          document.getElementById('hiddenContent').value = rawTextarea.value;
+        }
       }
     });
   }, 100);

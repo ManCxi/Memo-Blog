@@ -302,8 +302,10 @@ function initEditor(force = false) {
             fd.append('file', file);
             fetch('/admin/media/upload', {
               method: 'POST',
-              headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
-              body: fd
+              headers: {
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+              },
+              body: fd,
             })
               .then((r) => r.json())
               .then((d) => {
@@ -337,24 +339,34 @@ function initEditor(force = false) {
     class MediaLibraryMenu {
       constructor() {
         this.title = '从媒体库选择';
-        this.iconSvg = '<svg viewBox="0 0 1024 1024"><path d="M928 160H96c-17.7 0-32 14.3-32 32v640c0 17.7 14.3 32 32 32h832c17.7 0 32-14.3 32-32V192c0-17.7-14.3-32-32-32zM153.8 809.1l170.9-204 90.9 90.9L642.7 444l227.5 315.1H153.8zM736 384c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80z"></path></svg>';
+        this.iconSvg =
+          '<svg viewBox="0 0 1024 1024"><path d="M928 160H96c-17.7 0-32 14.3-32 32v640c0 17.7 14.3 32 32 32h832c17.7 0 32-14.3 32-32V192c0-17.7-14.3-32-32-32zM153.8 809.1l170.9-204 90.9 90.9L642.7 444l227.5 315.1H153.8zM736 384c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80z"></path></svg>';
         this.tag = 'button';
       }
-      getValue(editor) { return ''; }
-      isActive(editor) { return false; }
-      isDisabled(editor) { return false; }
+      getValue(editor) {
+        return '';
+      }
+      isActive(editor) {
+        return false;
+      }
+      isDisabled(editor) {
+        return false;
+      }
       exec(editor, value) {
         if (typeof window.openAttachmentPicker === 'function') {
-          window.openAttachmentPicker(url => {
-            editor.restoreSelection();
-            editor.insertNode({
-              type: 'image',
-              src: url,
-              alt: '图片',
-              style: { width: '100%' },
-              children: [{ text: '' }]
-            });
-          }, { accept: 'image' });
+          window.openAttachmentPicker(
+            (url) => {
+              editor.restoreSelection();
+              editor.insertNode({
+                type: 'image',
+                src: url,
+                alt: '图片',
+                style: { width: '100%' },
+                children: [{ text: '' }],
+              });
+            },
+            { accept: 'image' }
+          );
         } else {
           alert('媒体库组件未加载');
         }
@@ -363,7 +375,9 @@ function initEditor(force = false) {
     try {
       Boot.registerMenu({
         key: 'mediaLibrary',
-        factory() { return new MediaLibraryMenu(); }
+        factory() {
+          return new MediaLibraryMenu();
+        },
       });
     } catch (e) {}
 
@@ -373,8 +387,8 @@ function initEditor(force = false) {
       config: {
         insertKeys: {
           index: 23, // Position near image menu
-          keys: ['mediaLibrary']
-        }
+          keys: ['mediaLibrary'],
+        },
       },
       mode: 'default',
     });
@@ -468,57 +482,115 @@ function initMarkdownEditor() {
       initialValue: initialValue,
       minHeight: 'auto', // Let CSS flex-box handle the height
       toolbar: [
-        { name: "bold", action: window.EasyMDE.toggleBold, className: "fa fa-bold", title: "加粗 (Ctrl-B)" },
-        { name: "italic", action: window.EasyMDE.toggleItalic, className: "fa fa-italic", title: "斜体 (Ctrl-I)" },
-        { name: "heading", action: window.EasyMDE.toggleHeadingSmaller, className: "fa fa-header", title: "标题 (Ctrl-H)" },
-        "|",
-        { name: "quote", action: window.EasyMDE.toggleBlockquote, className: "fa fa-quote-left", title: "引用 (Ctrl-')" },
-        { name: "unordered-list", action: window.EasyMDE.toggleUnorderedList, className: "fa fa-list-ul", title: "无序列表 (Ctrl-L)" },
-        { name: "ordered-list", action: window.EasyMDE.toggleOrderedList, className: "fa fa-list-ol", title: "有序列表 (Ctrl-Alt-L)" },
-        "|",
-        { name: "link", action: window.EasyMDE.drawLink, className: "fa fa-link", title: "创建链接 (Ctrl-K)" },
-        { 
-          name: "image", 
-          action: function(editor) {
+        {
+          name: 'bold',
+          action: window.EasyMDE.toggleBold,
+          className: 'fa fa-bold',
+          title: '加粗 (Ctrl-B)',
+        },
+        {
+          name: 'italic',
+          action: window.EasyMDE.toggleItalic,
+          className: 'fa fa-italic',
+          title: '斜体 (Ctrl-I)',
+        },
+        {
+          name: 'heading',
+          action: window.EasyMDE.toggleHeadingSmaller,
+          className: 'fa fa-header',
+          title: '标题 (Ctrl-H)',
+        },
+        '|',
+        {
+          name: 'quote',
+          action: window.EasyMDE.toggleBlockquote,
+          className: 'fa fa-quote-left',
+          title: "引用 (Ctrl-')",
+        },
+        {
+          name: 'unordered-list',
+          action: window.EasyMDE.toggleUnorderedList,
+          className: 'fa fa-list-ul',
+          title: '无序列表 (Ctrl-L)',
+        },
+        {
+          name: 'ordered-list',
+          action: window.EasyMDE.toggleOrderedList,
+          className: 'fa fa-list-ol',
+          title: '有序列表 (Ctrl-Alt-L)',
+        },
+        '|',
+        {
+          name: 'link',
+          action: window.EasyMDE.drawLink,
+          className: 'fa fa-link',
+          title: '创建链接 (Ctrl-K)',
+        },
+        {
+          name: 'image',
+          action: function (editor) {
             if (typeof window.openAttachmentPicker === 'function') {
-              window.openAttachmentPicker(function(url) {
-                const targetEditor = editor || window.easyMDE;
-                if (!targetEditor || !targetEditor.codemirror) {
-                  console.error('EasyMDE instance not found for insertion');
-                  return;
-                }
-                // Ensure editor is focused
-                targetEditor.codemirror.focus();
-                // Format URL
-                const imageUrl = url.startsWith('http') || url.startsWith('/') ? url : '/' + url;
-                // Insert at cursor using the underlying CodeMirror instance
-                targetEditor.codemirror.replaceSelection(`![图片描述](${imageUrl})`);
-                // Refresh to sync value
-                targetEditor.codemirror.refresh();
-              }, { accept: 'image' });
+              window.openAttachmentPicker(
+                function (url) {
+                  const targetEditor = editor || window.easyMDE;
+                  if (!targetEditor || !targetEditor.codemirror) {
+                    console.error('EasyMDE instance not found for insertion');
+                    return;
+                  }
+                  // Ensure editor is focused
+                  targetEditor.codemirror.focus();
+                  // Format URL
+                  const imageUrl = url.startsWith('http') || url.startsWith('/') ? url : '/' + url;
+                  // Insert at cursor using the underlying CodeMirror instance
+                  targetEditor.codemirror.replaceSelection(`![图片描述](${imageUrl})`);
+                  // Refresh to sync value
+                  targetEditor.codemirror.refresh();
+                },
+                { accept: 'image' }
+              );
             } else {
               // Fallback to default if picker not found
               window.EasyMDE.drawImage(editor);
             }
-          }, 
-          className: "fa fa-picture-o", 
-          title: "插入媒体库图片 (Ctrl-Alt-I)" 
+          },
+          className: 'fa fa-picture-o',
+          title: '插入媒体库图片 (Ctrl-Alt-I)',
         },
-        { name: "table", action: window.EasyMDE.drawTable, className: "fa fa-table", title: "插入表格" },
-        "|",
-        { name: "preview", action: window.EasyMDE.togglePreview, className: "fa fa-eye no-disable", title: "实时预览 (Ctrl-P)" },
-        { name: "side-by-side", action: window.EasyMDE.toggleSideBySide, className: "fa fa-columns no-disable no-mobile", title: "分栏预览 (F9)" },
         {
-          name: "fullscreen",
+          name: 'table',
+          action: window.EasyMDE.drawTable,
+          className: 'fa fa-table',
+          title: '插入表格',
+        },
+        '|',
+        {
+          name: 'preview',
+          action: window.EasyMDE.togglePreview,
+          className: 'fa fa-eye no-disable',
+          title: '实时预览 (Ctrl-P)',
+        },
+        {
+          name: 'side-by-side',
+          action: window.EasyMDE.toggleSideBySide,
+          className: 'fa fa-columns no-disable no-mobile',
+          title: '分栏预览 (F9)',
+        },
+        {
+          name: 'fullscreen',
           action(editor) {
             window.EasyMDE.toggleFullScreen(editor);
             setTimeout(() => syncEasyMDEFullscreenState(editor || easyMDE), 0);
           },
-          className: "fa fa-arrows-alt no-disable no-mobile",
-          title: "全屏模式 (F11)"
+          className: 'fa fa-arrows-alt no-disable no-mobile',
+          title: '全屏模式 (F11)',
         },
-        "|",
-        { name: "guide", action: "https://www.markdownguide.org/basic-syntax/", className: "fa fa-question-circle", title: "Markdown 指南" }
+        '|',
+        {
+          name: 'guide',
+          action: 'https://www.markdownguide.org/basic-syntax/',
+          className: 'fa fa-question-circle',
+          title: 'Markdown 指南',
+        },
       ],
     });
 
@@ -571,14 +643,16 @@ function switchEditor(type) {
   const hiddenContent = document.getElementById('hiddenContent');
 
   // Determine previous type based on visibility
-  const prevType = (wangArea && wangArea.classList.contains('d-none')) ? 'markdown' : 'html';
+  const prevType = wangArea && wangArea.classList.contains('d-none') ? 'markdown' : 'html';
   if (type === prevType) return;
 
   // 1. Sync current content to hiddenContent
   if (prevType === 'html' && window.editor) {
     hiddenContent.value = window.editor.getHtml();
   } else if (prevType === 'markdown') {
-    hiddenContent.value = easyMDE ? easyMDE.value() : document.getElementById('markdown-editor').value;
+    hiddenContent.value = easyMDE
+      ? easyMDE.value()
+      : document.getElementById('markdown-editor').value;
   }
 
   const content = hiddenContent.value.trim();
@@ -591,14 +665,16 @@ function switchEditor(type) {
         headingStyle: 'atx',
         hr: '---',
         bulletListMarker: '-',
-        codeBlockStyle: 'fenced'
+        codeBlockStyle: 'fenced',
       });
 
       turndownService.addRule('codeblock', {
         filter: 'pre',
         replacement: function (content, node) {
           const codeElem = node.querySelector('code');
-          const code = codeElem ? (codeElem.innerText || codeElem.textContent) : (node.innerText || node.textContent);
+          const code = codeElem
+            ? codeElem.innerText || codeElem.textContent
+            : node.innerText || node.textContent;
           let lang = '';
           if (codeElem) {
             const cls = codeElem.className || '';
@@ -606,7 +682,7 @@ function switchEditor(type) {
             if (match) lang = match[1];
           }
           return '\n\n```' + lang + '\n' + code.trim() + '\n```\n\n';
-        }
+        },
       });
 
       turndownService.addRule('headings', {
@@ -614,7 +690,7 @@ function switchEditor(type) {
         replacement: function (content, node) {
           const level = node.nodeName.charAt(1);
           return '\n\n' + '#'.repeat(level) + ' ' + content.trim() + '\n\n';
-        }
+        },
       });
 
       let rawHtml = hiddenContent.value.replace(/&nbsp;/g, ' ');
@@ -639,7 +715,11 @@ function switchEditor(type) {
     const Marked = window.marked;
     if (Marked) {
       const markdown = hiddenContent.value;
-      const html = Marked.parse ? Marked.parse(markdown) : (typeof Marked === 'function' ? Marked(markdown) : markdown);
+      const html = Marked.parse
+        ? Marked.parse(markdown)
+        : typeof Marked === 'function'
+          ? Marked(markdown)
+          : markdown;
       hiddenContent.value = html.trim();
     }
   }
@@ -738,7 +818,16 @@ function setCover(url) {
 function openPreviewModal() {
   const type = getEditorType();
   const hiddenContent = document.getElementById('hiddenContent');
-  const content = type === 'markdown' ? (easyMDE ? easyMDE.value() : '') : (window.editor ? window.editor.getHtml() : (hiddenContent ? hiddenContent.value : ''));
+  const content =
+    type === 'markdown'
+      ? easyMDE
+        ? easyMDE.value()
+        : ''
+      : window.editor
+        ? window.editor.getHtml()
+        : hiddenContent
+          ? hiddenContent.value
+          : '';
 
   if (!content && content !== '') {
     alert('编辑器内容获取异常，请刷新页面重试。');
@@ -792,7 +881,6 @@ function openPreviewModal() {
   iframe.onload = send;
   iframe.src = '/article-preview?t=' + Date.now();
 }
-
 
 function closePreviewModal() {
   const modal = document.getElementById('previewModal');
@@ -929,7 +1017,7 @@ async function submitNewCategory() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
       },
       body: JSON.stringify({ name }),
     });
@@ -992,7 +1080,7 @@ async function submitNewTag() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
       },
       body: JSON.stringify({ name }),
     });

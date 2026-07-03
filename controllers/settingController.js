@@ -67,13 +67,13 @@ exports.updateSettings = async (req, res) => {
       if (key.startsWith('_')) continue; // 跳过 _method 等辅助字段
       try {
         let val = value;
-        if (key === 'head_code' || key === 'copyright' || key === 'site_description') {
+        if (key === 'copyright' || key === 'site_description') {
           val = sanitize(value);
         }
         parsed[key] = JSON.parse(val);
       } catch {
         let val = value;
-        if (key === 'head_code' || key === 'copyright' || key === 'site_description') {
+        if (key === 'copyright' || key === 'site_description') {
           val = sanitize(value);
         }
         parsed[key] = val;
@@ -94,7 +94,7 @@ exports.updateSettingsApi = async (req, res) => {
     const data = req.body;
     const sanitized = {};
     for (const [key, value] of Object.entries(data)) {
-      if (key === 'head_code' || key === 'copyright' || key === 'site_description') {
+      if (key === 'copyright' || key === 'site_description') {
         sanitized[key] = sanitize(value);
       } else {
         sanitized[key] = value;

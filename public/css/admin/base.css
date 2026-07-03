@@ -69,14 +69,8 @@ body {
   background: #ebebf0;
   color: var(--text-primary);
   font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    'SF Pro Text',
-    'PingFang SC',
-    'Hiragino Sans GB',
-    'Microsoft YaHei',
-    'Helvetica Neue',
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', sans-serif;
   font-size: 14px;
   line-height: 1.6;
   height: 100vh;

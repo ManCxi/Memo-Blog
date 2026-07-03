@@ -30,12 +30,12 @@ const sanitizeOptions = {
     span: ['class', 'style'],
     div: ['class', 'style'],
     a: ['href', 'name', 'target', 'rel', 'class', 'style'], // Added explicitly
-    'h1': ['class', 'id', 'style'], // Allow ID on headings for TOC anchors
-    'h2': ['class', 'id', 'style'],
-    'h3': ['class', 'id', 'style'],
-    'h4': ['class', 'id', 'style'],
-    'h5': ['class', 'id', 'style'],
-    'h6': ['class', 'id', 'style'],
+    h1: ['class', 'id', 'style'], // Allow ID on headings for TOC anchors
+    h2: ['class', 'id', 'style'],
+    h3: ['class', 'id', 'style'],
+    h4: ['class', 'id', 'style'],
+    h5: ['class', 'id', 'style'],
+    h6: ['class', 'id', 'style'],
     '*': ['class', 'style'], // Remove 'id' from global whitelist
   },
   allowedClasses: {

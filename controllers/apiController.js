@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/apiAuth');
+const { sanitize } = require('../utils/sanitizer');
 
 exports.getArticles = async (req, res) => {
   try {
@@ -70,20 +71,29 @@ exports.getArticleById = async (req, res) => {
 
 exports.createArticle = async (req, res) => {
   try {
-    const { title, content, summary, cover, status, categoryId, tags } = req.body;
+    const { title, content, summary, cover, status, categoryId, tags, editorType } = req.body;
     let slug = slugify(title, { lower: true, strict: true });
     const existing = await Article.findOne({ where: { slug } });
     if (existing) slug = `${slug}-${Date.now()}`;
 
+    const finalEditorType = editorType || 'html';
+    const sanitizedContent = finalEditorType === 'markdown' ? content : sanitize(content);
+    const sanitizedSummary =
+      sanitize(summary) ||
+      (finalEditorType === 'markdown'
+        ? content.slice(0, 200)
+        : sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, ''));
+
     const article = await Article.create({
       title,
       slug,
-      content,
-      summary,
+      content: sanitizedContent,
+      summary: sanitizedSummary,
       cover,
       status: (status || 'published').toLowerCase(),
       CategoryId: categoryId || null,
       UserId: req.user.id || 1,
+      editorType: finalEditorType,
     });
 
     if (tags && tags.length > 0) {
@@ -106,14 +116,24 @@ exports.updateArticle = async (req, res) => {
     const article = await Article.findByPk(req.params.id);
     if (!article) return res.status(404).json({ error: 'Not found' });
 
-    const { title, content, summary, cover, status, categoryId, tags } = req.body;
+    const { title, content, summary, cover, status, categoryId, tags, editorType } = req.body;
+
+    const finalEditorType = editorType || article.editorType;
+    const sanitizedContent = finalEditorType === 'markdown' ? content : sanitize(content);
+    const sanitizedSummary =
+      sanitize(summary) ||
+      (finalEditorType === 'markdown'
+        ? content.slice(0, 200)
+        : sanitizedContent.slice(0, 200).replace(/<[^>]+>/g, ''));
+
     await article.update({
       title,
-      content,
-      summary,
+      content: sanitizedContent,
+      summary: sanitizedSummary,
       cover,
       status: (status || 'published').toLowerCase(),
       CategoryId: categoryId || null,
+      editorType: finalEditorType,
     });
 
     if (tags !== undefined) {
@@ -224,7 +244,32 @@ exports.getProfile = async (req, res) => {
 };
 
 exports.updatePassword = async (req, res) => {
-  res.json({ success: true });
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Missing currentPassword or newPassword' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const ok = await user.validatePassword(currentPassword);
+    if (!ok) {
+      return res.status(400).json({ error: 'Incorrect current password' });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await user.update({ password: hashed }, { hooks: false });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 exports.getStats = async (req, res) => {

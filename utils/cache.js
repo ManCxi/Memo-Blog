@@ -137,17 +137,28 @@ const cache = {
       if (keys.length === 0) return;
 
       for (const key of keys) {
+        if (key.endsWith(':syncing')) continue; // Skip temporary sync keys
         const id = parseInt(key.split(':')[2]);
-        const count = parseInt(await redis.get(key));
+        const tempKey = `${key}:syncing`;
+        try {
+          await redis.rename(key, tempKey);
+        } catch (renameErr) {
+          // key 不存在或已经被处理，跳过
+          continue;
+        }
+
+        const count = parseInt(await redis.get(tempKey));
         if (count > 0) {
           await Article.increment('views', { by: count, where: { id } });
-          await redis.del(key);
+          await redis.del(tempKey);
 
           // 获取更新后的文章 slug 用于清除详情缓存
           const article = await Article.findByPk(id, { attributes: ['slug'] });
           if (article) {
             await this.del(`article:${article.slug}`);
           }
+        } else {
+          await redis.del(tempKey);
         }
       }
       // 同步后清除列表缓存和侧边栏，因为总阅读量/排行可能变了
