@@ -1,70 +1,271 @@
 <% const activePage = 'settings-carousel' %>
 <%- include('../partials/layout-head') %>
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px;">
+
+<style>
+  .carousel-item-list-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .carousel-item-list-row:hover {
+    border-color: #cbd5e1;
+    background: var(--bg-body);
+  }
+  .carousel-item-list-row.active {
+    border-color: var(--primary) !important;
+    background: rgba(255, 87, 34, 0.05) !important;
+  }
+  .carousel-item-list-row.active .item-title {
+    color: var(--primary) !important;
+    font-weight: 600;
+  }
+  .settings-row-col-ghost {
+    opacity: 0.4;
+    background: var(--bg-body);
+    border: 1px dashed var(--primary);
+  }
+
+  @media (max-width: 768px) {
+    .settings-container-two-col {
+      flex-direction: column !important;
+    }
+    .settings-list-col {
+      width: 100% !important;
+    }
+    .settings-edit-col {
+      width: 100% !important;
+      position: static !important;
+    }
+  }
+</style>
+
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin-bottom: 20px;">
   <h1 class="page-title" style="margin: 0;">轮播图</h1>
-  <button type="button" class="btn btn-primary" onclick="addCarouselItem()" style="border-radius: 99px; padding: 6px 16px; font-size: 13px;">
-    + 添加轮播项
-  </button>
 </div>
 
-<div id="carouselList" class="settings-group" style="max-width: 1000px;"></div>
+<div class="settings-container-two-col" style="display: flex; gap: 24px; max-width: 1000px; align-items: flex-start; margin-bottom: 24px;">
+  <!-- Left Side: List & Sorting -->
+  <div class="settings-list-col" style="flex: 1; min-width: 320px; background: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow-sm);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <span style="font-size: 14px; font-weight: 600; color: var(--text-secondary);">轮播项列表</span>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addCarouselItem()" style="border-radius: 8px; padding: 4px 10px; font-size: 12px;">
+        + 添加轮播项
+      </button>
+    </div>
+    
+    <div id="carouselList" style="display: flex; flex-direction: column; gap: 8px;">
+      <!-- JavaScript will render the list here -->
+    </div>
+  </div>
+
+  <!-- Right Side: Item Details / Editor -->
+  <div class="settings-edit-col" style="width: 450px; background: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow-sm); position: sticky; top: 80px;">
+    <h3 style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+      <span>⚙️</span> 轮播项配置
+    </h3>
+    <div id="carouselEditor">
+      <!-- JavaScript will render editor form here -->
+    </div>
+  </div>
+</div>
 
 <div style="margin-bottom: 24px; max-width: 1000px;">
   <button type="button" class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="saveCarousel()">保存轮播设置</button>
 </div>
 
+<script src="/libs/sortablejs/Sortable.min.js"></script>
 <script>
 const carouselItems = <%- JSON.stringify(settings.carousel_items || []) %>;
 const articles = <%- JSON.stringify(typeof articles !== "undefined" ? articles : []) %>;
-function renderCarousel(){
+let sortableInstance = null;
+let selectedIdx = carouselItems.length > 0 ? 0 : -1;
+
+function selectItem(idx) {
+  selectedIdx = idx;
+  renderCarouselList();
+  renderCarouselEditor();
+}
+
+function renderCarouselList() {
   const list = document.getElementById('carouselList');
-  if (!carouselItems.length) { list.innerHTML = '<div class="settings-row"><div class="settings-label" style="width: 100%; text-align: center; justify-content: center; color: var(--text-tertiary); font-weight: 400; padding: 20px 0;">暂无轮播项，点击右上角「添加」创建</div></div>'; return; }
-  
+  if (!carouselItems.length) {
+    list.innerHTML = '<div style="text-align: center; color: var(--text-tertiary); padding: 30px 0; font-size: 13px;">暂无轮播项，点击右上角「添加」创建</div>';
+    selectedIdx = -1;
+    if(sortableInstance) sortableInstance.destroy();
+    return;
+  }
+
+  list.innerHTML = carouselItems.map((item, i) => `
+    <div class="carousel-item-list-row ${i === selectedIdx ? 'active' : ''}" data-idx="${i}" onclick="selectItem(${i})">
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+        <span class="drag-handle" style="cursor: grab; color: var(--text-tertiary); font-size: 15px;" onclick="event.stopPropagation()">☰</span>
+        ${item.image ? `<img src="${escHtml(item.image)}" style="width: 28px; height: 28px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border);" />` : `<div style="width: 28px; height: 28px; border-radius: 4px; background: var(--bg-body); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-tertiary);">🖼️</div>`}
+        <span class="item-title" style="font-weight: 500; font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
+          ${escHtml(item.title || '(未命名轮播项)')}
+        </span>
+      </div>
+      <span class="item-subtitle" style="font-size: 11px; color: var(--text-tertiary); white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis;">
+        ${escHtml(item.subtitle || '')}
+      </span>
+    </div>
+  `).join('');
+
+  if (sortableInstance) sortableInstance.destroy();
+  sortableInstance = new Sortable(list, {
+    handle: '.drag-handle',
+    animation: 200,
+    ghostClass: 'settings-row-col-ghost',
+    onEnd: function(evt) {
+      const movedItem = carouselItems.splice(evt.oldIndex, 1)[0];
+      carouselItems.splice(evt.newIndex, 0, movedItem);
+      
+      // Update selectedIdx to match the moved item
+      if (selectedIdx === evt.oldIndex) {
+        selectedIdx = evt.newIndex;
+      } else if (selectedIdx > evt.oldIndex && selectedIdx <= evt.newIndex) {
+        selectedIdx--;
+      } else if (selectedIdx < evt.oldIndex && selectedIdx >= evt.newIndex) {
+        selectedIdx++;
+      }
+      
+      renderCarouselList();
+      renderCarouselEditor();
+    }
+  });
+}
+
+function renderCarouselEditor() {
+  const editor = document.getElementById('carouselEditor');
+  if (selectedIdx === -1 || !carouselItems[selectedIdx]) {
+    editor.innerHTML = `
+      <div style="text-align: center; color: var(--text-tertiary); padding: 50px 0;">
+        <span style="font-size: 32px; display: block; margin-bottom: 12px;">🖼️</span>
+        请选择或添加轮播项进行编辑
+      </div>
+    `;
+    return;
+  }
+
+  const item = carouselItems[selectedIdx];
   const articleOptions = `<option value="">-- 一键关联已有文章 --</option>` +
     articles.map(a => `<option value="/article/${a.slug}" data-title="${escHtml(a.title||'')}" data-summary="${escHtml(a.summary||'')}" data-cover="${escHtml(a.cover||'')}">📄 ${escHtml(a.title)}</option>`).join('');
 
-  list.innerHTML = carouselItems.map((item,i)=>`
-    <div class="settings-row-col" style="padding-bottom: 20px;">
-      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <span style="font-weight: 600; font-size: 14px; color: var(--text-secondary);">轮播项 #${i + 1}</span>
-        <button type="button" class="btn btn-danger btn-sm" style="padding: 4px 10px; font-size: 12px; border-radius: 8px;" onclick="removeCarouselItem(${i})">删除</button>
+  editor.innerHTML = `
+    <div class="form-grid" style="display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px; display:block;">关联文章</label>
+        <select class="form-control" style="width:100%;" onchange="selectArticle(${selectedIdx}, this)">
+          ${articleOptions}
+        </select>
       </div>
-      <div class="form-grid" style="gap: 12px;">
-        <div style="grid-column: 1/-1; display:flex; gap:8px;">
-          <select class="form-control" style="width:auto; max-width:300px;" onchange="selectArticle(${i}, this)">
-            ${articleOptions}
-          </select>
-          <span style="color:var(--text-tertiary); font-size:12px; display:flex; align-items:center;">选择后自动填充下方未设置信息</span>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px; display:block;">背景图片</label>
+        <div style="display:flex; gap: 8px;">
+          <input type="text" id="carouselImg${selectedIdx}" class="form-control" value="${escHtml(item.image||'')}" placeholder="/uploads/..." oninput="updateItemImage(${selectedIdx}, this.value)">
+          <button type="button" class="btn btn-secondary" style="border-radius: 12px;" onclick="openCarouselMediaPicker(${selectedIdx})">选图</button>
         </div>
-        <div style="grid-column: 1/-1;">
-          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">背景图片</label>
-          <div style="display:flex; gap: 8px;">
-            <input type="text" id="carouselImg${i}" class="form-control" value="${escHtml(item.image||'')}" placeholder="/uploads/..." onchange="carouselItems[${i}].image=this.value">
-            <button type="button" class="btn btn-secondary" style="border-radius: 12px;" onclick="openCarouselMediaPicker(${i})">选图</button>
-          </div>
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">标题</label>
-          <input type="text" class="form-control" value="${escHtml(item.title||'')}" placeholder="主标题" onchange="carouselItems[${i}].title=this.value">
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">副标题</label>
-          <input type="text" class="form-control" value="${escHtml(item.subtitle||'')}" placeholder="副标题" onchange="carouselItems[${i}].subtitle=this.value">
-        </div>
-        <div style="grid-column: 1/-1;">
-          <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:4px; display:block;">链接 URL</label>
-          <input type="text" class="form-control" value="${escHtml(item.url||'')}" placeholder="/posts/..." onchange="carouselItems[${i}].url=this.value">
+        <div id="imgPreviewContainer${selectedIdx}" style="margin-top: 8px; ${item.image ? '' : 'display: none;'}">
+          <img src="${escHtml(item.image)}" id="carouselImgPreview${selectedIdx}" style="width: 100%; max-height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);" />
         </div>
       </div>
-    </div>`).join('');
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px; display:block;">主标题</label>
+        <input type="text" class="form-control" value="${escHtml(item.title||'')}" placeholder="如：欢迎光临本站" oninput="updateItemTitle(${selectedIdx}, this.value)">
+      </div>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px; display:block;">副标题</label>
+        <input type="text" class="form-control" value="${escHtml(item.subtitle||'')}" placeholder="如：分享技术与生活" oninput="updateItemSubtitle(${selectedIdx}, this.value)">
+      </div>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px; display:block;">链接 URL</label>
+        <input type="text" class="form-control" value="${escHtml(item.url||'')}" placeholder="如：/article/welcome" oninput="updateItemUrl(${selectedIdx}, this.value)">
+      </div>
+
+      <div style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-tertiary);">编辑轮播项 #${selectedIdx + 1}</span>
+        <button type="button" class="btn btn-danger btn-sm" style="border-radius: 8px; padding: 6px 12px; font-size: 12px;" onclick="removeCarouselItem(${selectedIdx})">
+          删除此轮播项
+        </button>
+      </div>
+    </div>
+  `;
 }
-function addCarouselItem(){ carouselItems.push({ title:'', subtitle:'', url:'', image:'' }); renderCarousel(); }
-function removeCarouselItem(i){ carouselItems.splice(i,1); renderCarousel(); }
-async function saveCarousel(){
-  const resp = await fetch('/admin/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ carousel_items: carouselItems }) });
-  const data = await resp.json(); showToast(data.ok?'已保存':'保存失败', data.ok?'success':'error');
+
+function updateItemTitle(idx, val) {
+  carouselItems[idx].title = val;
+  const row = document.querySelector(`.carousel-item-list-row[data-idx="${idx}"]`);
+  if (row) {
+    const titleEl = row.querySelector('.item-title');
+    if (titleEl) titleEl.innerText = val || '(未命名轮播项)';
+  }
 }
-function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function updateItemSubtitle(idx, val) {
+  carouselItems[idx].subtitle = val;
+  const row = document.querySelector(`.carousel-item-list-row[data-idx="${idx}"]`);
+  if (row) {
+    const subEl = row.querySelector('.item-subtitle');
+    if (subEl) subEl.innerText = val;
+  }
+}
+
+function updateItemImage(idx, val) {
+  carouselItems[idx].image = val;
+  
+  // Update left thumbnail dynamically
+  const row = document.querySelector(`.carousel-item-list-row[data-idx="${idx}"]`);
+  if (row) {
+    // Find img tag or create one
+    let img = row.querySelector('img');
+    if (val) {
+      if (!img) {
+        // Replace icon placeholder with image tag
+        const placeholder = row.querySelector('div');
+        if (placeholder) {
+          img = document.createElement('img');
+          img.style.cssText = "width: 28px; height: 28px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border);";
+          placeholder.replaceWith(img);
+        }
+      }
+      if (img) img.src = val;
+    } else {
+      if (img) {
+        // Replace image tag with placeholder
+        const placeholder = document.createElement('div');
+        placeholder.style.cssText = "width: 28px; height: 28px; border-radius: 4px; background: var(--bg-body); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-tertiary);";
+        placeholder.innerText = "🖼️";
+        img.replaceWith(placeholder);
+      }
+    }
+  }
+  
+  // Update local preview image dynamically
+  const previewContainer = document.getElementById('imgPreviewContainer' + idx);
+  const imgPreview = document.getElementById('carouselImgPreview' + idx);
+  if (previewContainer && imgPreview) {
+    if (val) {
+      imgPreview.src = val;
+      previewContainer.style.display = 'block';
+    } else {
+      previewContainer.style.display = 'none';
+    }
+  }
+}
+
+function updateItemUrl(idx, val) {
+  carouselItems[idx].url = val;
+}
 
 function selectArticle(index, selectEl) {
   const option = selectEl.options[selectEl.selectedIndex];
@@ -80,7 +281,8 @@ function selectArticle(index, selectEl) {
   if (!carouselItems[index].subtitle && summary) carouselItems[index].subtitle = summary;
   if (!carouselItems[index].url && url) carouselItems[index].url = url;
 
-  renderCarousel();
+  renderCarouselList();
+  renderCarouselEditor();
 }
 
 function openCarouselMediaPicker(index) {
@@ -90,9 +292,45 @@ function openCarouselMediaPicker(index) {
     if (carouselItems[index]) {
       carouselItems[index].image = url;
     }
+    updateItemImage(index, url);
   }, { accept: 'image' });
 }
 
-renderCarousel();
+function addCarouselItem() {
+  carouselItems.push({ title: '', subtitle: '', url: '', image: '' });
+  selectedIdx = carouselItems.length - 1;
+  renderCarouselList();
+  renderCarouselEditor();
+}
+
+function removeCarouselItem(i) {
+  carouselItems.splice(i, 1);
+  if (selectedIdx >= carouselItems.length) {
+    selectedIdx = carouselItems.length - 1;
+  }
+  renderCarouselList();
+  renderCarouselEditor();
+}
+
+async function saveCarousel() {
+  const resp = await fetch('/admin/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ carousel_items: carouselItems })
+  });
+  const data = await resp.json();
+  showToast(data.ok ? '已保存' : '保存失败', data.ok ? 'success' : 'error');
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+renderCarouselList();
+renderCarouselEditor();
 </script>
 <%- include('../partials/layout-foot') %>

@@ -1,13 +1,79 @@
 <% const activePage = 'settings-nav' %>
 <%- include('../partials/layout-head') %>
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px;">
+
+<style>
+  .nav-item-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-item-list-row:hover {
+    border-color: #cbd5e1;
+    background: var(--bg-body);
+  }
+  .nav-item-list-row.active {
+    border-color: var(--primary) !important;
+    background: rgba(255, 87, 34, 0.05) !important;
+  }
+  .nav-item-list-row.active .item-title {
+    color: var(--primary) !important;
+    font-weight: 600;
+  }
+  .settings-row-col-ghost {
+    opacity: 0.4;
+    background: var(--bg-body);
+    border: 1px dashed var(--primary);
+  }
+
+  @media (max-width: 768px) {
+    .settings-container-two-col {
+      flex-direction: column !important;
+    }
+    .settings-list-col {
+      width: 100% !important;
+    }
+    .settings-edit-col {
+      width: 100% !important;
+      position: static !important;
+    }
+  }
+</style>
+
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin-bottom: 20px;">
   <h1 class="page-title" style="margin: 0;">导航菜单</h1>
-  <button type="button" class="btn btn-primary" onclick="addNavMenu()" style="border-radius: 99px; padding: 6px 16px; font-size: 13px;">
-    + 添加菜单项
-  </button>
 </div>
 
-<div id="navMenuList" class="settings-group" style="max-width: 1000px;"></div>
+<div class="settings-container-two-col" style="display: flex; gap: 24px; max-width: 1000px; align-items: flex-start; margin-bottom: 24px;">
+  <!-- Left Side: List & Sorting -->
+  <div class="settings-list-col" style="flex: 1; min-width: 320px; background: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow-sm);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <span style="font-size: 14px; font-weight: 600; color: var(--text-secondary);">栏目列表</span>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addNavMenu()" style="border-radius: 8px; padding: 4px 10px; font-size: 12px;">
+        + 添加菜单项
+      </button>
+    </div>
+    
+    <div id="navMenuList" style="display: flex; flex-direction: column; gap: 8px;">
+      <!-- JavaScript will render the list here -->
+    </div>
+  </div>
+
+  <!-- Right Side: Item Details / Editor -->
+  <div class="settings-edit-col" style="width: 450px; background: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow-sm); position: sticky; top: 80px;">
+    <h3 style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+      <span>⚙️</span> 栏目详情配置
+    </h3>
+    <div id="navMenuEditor">
+      <!-- JavaScript will render editor form here -->
+    </div>
+  </div>
+</div>
 
 <div style="margin-bottom: 24px; max-width: 1000px;">
   <button type="button" class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="saveNavMenus()">保存导航设置</button>
@@ -20,38 +86,36 @@ const navMenus = <%- JSON.stringify(settings.nav_menus || []) %>;
 const categories = <%- JSON.stringify(typeof categories !== "undefined" ? categories : []) %>;
 const pages = <%- JSON.stringify(typeof pages !== "undefined" ? pages : []) %>;
 let sortableInstance = null;
-function renderNavMenus() {
+let selectedIdx = navMenus.length > 0 ? 0 : -1;
+
+function selectItem(idx) {
+  selectedIdx = idx;
+  renderNavMenuList();
+  renderNavMenuEditor();
+}
+
+function renderNavMenuList() {
   const list = document.getElementById('navMenuList');
   if (!navMenus.length) {
-    list.innerHTML = '<div class="settings-row"><div class="settings-label" style="width: 100%; text-align: center; justify-content: center; color: var(--text-tertiary); font-weight: 400; padding: 20px 0;">暂无菜单项，点击右上角「添加」创建</div></div>';
+    list.innerHTML = '<div style="text-align: center; color: var(--text-tertiary); padding: 30px 0; font-size: 13px;">暂无菜单项，点击右上角「添加」创建</div>';
+    selectedIdx = -1;
     if(sortableInstance) sortableInstance.destroy();
     return;
   }
 
-  const catOptions = `<option value="">-- 从已有分类或页面填充 --</option>` +
-    categories.map(c => `<option value="${c.slug}" data-name="${c.name}" data-type="category">📁 分类: ${c.name}</option>`).join('') +
-    pages.map(p => `<option value="${p.slug}" data-name="${p.title}" data-type="page">📄 页面: ${p.title}</option>`).join('');
-
   list.innerHTML = navMenus.map((item, i) => `
-    <div class="settings-row-col nav-item-row" data-idx="${i}" style="transition: all 0.2s;">
-      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-weight: 600; font-size: 14px; color: var(--text-secondary); display:flex; align-items:center; gap:8px;">
-          <span class="drag-handle" style="cursor: grab; color: var(--text-tertiary); font-size: 16px;">☰</span>
-          菜单项 #${i + 1}
+    <div class="nav-item-list-row ${i === selectedIdx ? 'active' : ''}" data-idx="${i}" onclick="selectItem(${i})">
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+        <span class="drag-handle" style="cursor: grab; color: var(--text-tertiary); font-size: 15px;" onclick="event.stopPropagation()">☰</span>
+        <span class="item-title" style="font-weight: 500; font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${escHtml(item.label || '(未命名菜单)')}
         </span>
-        <button type="button" class="btn btn-danger btn-sm" style="padding: 4px 10px; font-size: 12px; border-radius: 8px;" onclick="removeNavMenu(${i})">删除</button>
       </div>
-      <div class="form-grid" style="gap: 12px;">
-        <div style="grid-column: 1/-1; display:flex; gap:8px;">
-          <select class="form-control" style="width:auto;" onchange="selectCategory(${i}, this)">
-            ${catOptions}
-          </select>
-          <span style="color:var(--text-tertiary); font-size:12px; display:flex; align-items:center;">一键绑定已有分类或页面</span>
-        </div>
-        <input type="text" class="form-control" value="${escHtml(item.label||'')}" placeholder="菜单名称" onchange="navMenus[${i}].label=this.value">
-        <input type="text" class="form-control" value="${escHtml(item.url||'')}" placeholder="/path 或 https://" onchange="navMenus[${i}].url=this.value">
-      </div>
-    </div>`).join('');
+      <span class="item-url" style="font-size: 11px; color: var(--text-tertiary); margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; text-align: right;">
+        ${escHtml(item.url || '未设置路径')}
+      </span>
+    </div>
+  `).join('');
 
   if (sortableInstance) sortableInstance.destroy();
   sortableInstance = new Sortable(list, {
@@ -61,9 +125,84 @@ function renderNavMenus() {
     onEnd: function(evt) {
       const movedItem = navMenus.splice(evt.oldIndex, 1)[0];
       navMenus.splice(evt.newIndex, 0, movedItem);
-      renderNavMenus();
+      
+      // Update selectedIdx to match the moved item
+      if (selectedIdx === evt.oldIndex) {
+        selectedIdx = evt.newIndex;
+      } else if (selectedIdx > evt.oldIndex && selectedIdx <= evt.newIndex) {
+        selectedIdx--;
+      } else if (selectedIdx < evt.oldIndex && selectedIdx >= evt.newIndex) {
+        selectedIdx++;
+      }
+      
+      renderNavMenuList();
+      renderNavMenuEditor();
     }
   });
+}
+
+function renderNavMenuEditor() {
+  const editor = document.getElementById('navMenuEditor');
+  if (selectedIdx === -1 || !navMenus[selectedIdx]) {
+    editor.innerHTML = `
+      <div style="text-align: center; color: var(--text-tertiary); padding: 50px 0;">
+        <span style="font-size: 32px; display: block; margin-bottom: 12px;">🧭</span>
+        请选择或添加菜单项进行编辑
+      </div>
+    `;
+    return;
+  }
+
+  const item = navMenus[selectedIdx];
+  const catOptions = `<option value="">-- 从已有分类或页面填充 --</option>` +
+    categories.map(c => `<option value="${c.slug}" data-name="${c.name}" data-type="category">📁 分类: ${c.name}</option>`).join('') +
+    pages.map(p => `<option value="${p.slug}" data-name="${p.title}" data-type="page">📄 页面: ${p.title}</option>`).join('');
+
+  editor.innerHTML = `
+    <div class="form-grid" style="display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px; display:block;">一键绑定已有页面/分类</label>
+        <select class="form-control" style="width:100%;" onchange="selectCategory(${selectedIdx}, this)">
+          ${catOptions}
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px; display:block;">菜单名称</label>
+        <input type="text" class="form-control" value="${escHtml(item.label||'')}" placeholder="如：首页、关于我" oninput="updateItemLabel(${selectedIdx}, this.value)">
+      </div>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px; display:block;">链接路径 (URL)</label>
+        <input type="text" class="form-control" value="${escHtml(item.url||'')}" placeholder="如：/ 或 /about 或 https://..." oninput="updateItemUrl(${selectedIdx}, this.value)">
+      </div>
+
+      <div style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-tertiary);">编辑菜单 #${selectedIdx + 1}</span>
+        <button type="button" class="btn btn-danger btn-sm" style="border-radius: 8px; padding: 6px 12px; font-size: 12px;" onclick="removeNavMenu(${selectedIdx})">
+          删除此菜单项
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function updateItemLabel(idx, val) {
+  navMenus[idx].label = val;
+  const row = document.querySelector(`.nav-item-list-row[data-idx="${idx}"]`);
+  if (row) {
+    const titleEl = row.querySelector('.item-title');
+    if (titleEl) titleEl.innerText = val || '(未命名菜单)';
+  }
+}
+
+function updateItemUrl(idx, val) {
+  navMenus[idx].url = val;
+  const row = document.querySelector(`.nav-item-list-row[data-idx="${idx}"]`);
+  if (row) {
+    const urlEl = row.querySelector('.item-url');
+    if (urlEl) urlEl.innerText = val || '未设置路径';
+  }
 }
 
 function selectCategory(index, selectEl) {
@@ -73,16 +212,46 @@ function selectCategory(index, selectEl) {
   const type = selectEl.options[selectEl.selectedIndex].getAttribute('data-type');
   navMenus[index].label = name;
   navMenus[index].url = type === 'category' ? ('/category/' + slug) : ('/p/' + slug);
-  renderNavMenus();
+  
+  renderNavMenuList();
+  renderNavMenuEditor();
 }
-function addNavMenu(){ navMenus.push({ id: Date.now().toString(), label:'', url:'', children:[] }); renderNavMenus(); }
-function removeNavMenu(i){ navMenus.splice(i,1); renderNavMenus(); }
-async function saveNavMenus(){
-  const resp = await fetch('/admin/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nav_menus: navMenus }) });
+
+function addNavMenu() {
+  navMenus.push({ id: Date.now().toString(), label: '', url: '', children: [] });
+  selectedIdx = navMenus.length - 1;
+  renderNavMenuList();
+  renderNavMenuEditor();
+}
+
+function removeNavMenu(i) {
+  navMenus.splice(i, 1);
+  if (selectedIdx >= navMenus.length) {
+    selectedIdx = navMenus.length - 1;
+  }
+  renderNavMenuList();
+  renderNavMenuEditor();
+}
+
+async function saveNavMenus() {
+  const resp = await fetch('/admin/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nav_menus: navMenus })
+  });
   const data = await resp.json();
   showToast(data.ok ? '已保存' : '保存失败', data.ok ? 'success' : 'error');
 }
-function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-renderNavMenus();
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+renderNavMenuList();
+renderNavMenuEditor();
 </script>
 <%- include('../partials/layout-foot') %>
