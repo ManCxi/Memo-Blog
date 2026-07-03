@@ -17,6 +17,7 @@ const taxonomyController = require('../controllers/adminTaxonomyController');
 const settingController = require('../controllers/settingController');
 const attachmentController = require('../controllers/attachmentController');
 const pageController = require('../controllers/adminPageController');
+const backupController = require('../controllers/adminBackupController');
 
 // ── 任意文件的上传（不限图片类型）
 ensureUploadsDir();
@@ -153,5 +154,21 @@ router.get('/tags/list', tagController.listApi);
 router.post('/tags', tagController.create);
 router.put('/tags/:id', tagController.update);
 router.delete('/tags/:id', tagController.destroy);
+
+// ── 备份与恢复 ────────────────────────────────
+router.get('/backup', requireLogin, csrfProtection, backupController.index);
+router.get('/backup/export', requireLogin, backupController.exportBackup);
+
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB limit
+});
+router.post(
+  '/backup/import',
+  requireLogin,
+  memoryUpload.single('backup'),
+  csrfProtection,
+  backupController.importBackup
+);
 
 module.exports = router;
