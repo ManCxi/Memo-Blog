@@ -2,10 +2,13 @@ FROM node:24.14.0-alpine AS deps
 
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
+    apk add --no-cache python3 make g++
 
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm ci --omit=dev && \
+    npm cache clean --force
 
 FROM node:24.14.0-alpine AS runner
 
