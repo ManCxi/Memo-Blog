@@ -1,4 +1,4 @@
-FROM node:24.14.0-alpine AS deps
+FROM docker.1ms.run/library/node:24.17.0-alpine AS deps
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN npm config set registry https://registry.npmmirror.com && \
     npm ci --omit=dev && \
     npm cache clean --force
 
-FROM node:24.14.0-alpine AS runner
+FROM docker.1ms.run/library/node:24.17.0-alpine AS runner
 
 WORKDIR /app
 
