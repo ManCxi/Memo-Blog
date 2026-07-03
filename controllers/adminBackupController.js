@@ -120,13 +120,13 @@ exports.importBackup = async (req, res) => {
 
       // 清空原有表记录
       await sequelize.query('DELETE FROM ArticleTags', { transaction: t });
-      await Attachment.destroy({ where: {}, truncate: true, transaction: t, force: true });
-      await Setting.destroy({ where: {}, truncate: true, transaction: t, force: true });
-      await Page.destroy({ where: {}, truncate: true, transaction: t, force: true });
-      await Article.destroy({ where: {}, truncate: true, transaction: t, force: true });
-      await Tag.destroy({ where: {}, truncate: true, transaction: t, force: true });
-      await Category.destroy({ where: {}, truncate: true, transaction: t, force: true });
-      await User.destroy({ where: {}, truncate: true, transaction: t, force: true });
+      await Attachment.destroy({ where: {}, transaction: t, force: true });
+      await Setting.destroy({ where: {}, transaction: t, force: true });
+      await Page.destroy({ where: {}, transaction: t, force: true });
+      await Article.destroy({ where: {}, transaction: t, force: true });
+      await Tag.destroy({ where: {}, transaction: t, force: true });
+      await Category.destroy({ where: {}, transaction: t, force: true });
+      await User.destroy({ where: {}, transaction: t, force: true });
 
       // 按依赖顺序重构写入
       if (dbData.User && dbData.User.length) {
@@ -179,12 +179,19 @@ exports.importBackup = async (req, res) => {
 
     // 3. 解压并覆盖写入 /uploads 文件
     const uploadsEntries = zip.getEntries().filter((e) => e.entryName.startsWith('uploads/'));
+    const resolvedUploadsRoot = path.resolve(UPLOADS_ROOT);
     for (const entry of uploadsEntries) {
       if (entry.isDirectory) continue;
       const relativePath = entry.entryName.substring('uploads/'.length);
-      const fullPath = path.join(UPLOADS_ROOT, relativePath);
-      const dirPath = path.dirname(fullPath);
+      const fullPath = path.resolve(UPLOADS_ROOT, relativePath);
 
+      // 验证路径安全，防止 Zip Slip 攻击
+      if (!fullPath.startsWith(resolvedUploadsRoot)) {
+        console.warn('检测到非法的路径穿越文件并跳过:', entry.entryName);
+        continue;
+      }
+
+      const dirPath = path.dirname(fullPath);
       if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true });
       }
@@ -197,6 +204,6 @@ exports.importBackup = async (req, res) => {
     res.json({ ok: true, message: '系统数据与文件已成功恢复！' });
   } catch (err) {
     console.error('备份恢复失败:', err);
-    res.status(500).json({ ok: false, message: '恢复失败，错误原因：' + err.message });
+    res.status(500).json({ ok: false, message: '恢复失败，请检查备份包格式是否正确。' });
   }
 };
