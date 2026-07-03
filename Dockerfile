@@ -2,7 +2,7 @@ FROM docker.1ms.run/library/node:24.17.0-alpine AS deps
 
 WORKDIR /app
 
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
     apk add --no-cache python3 make g++
 
 COPY package*.json ./
