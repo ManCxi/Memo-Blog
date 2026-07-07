@@ -13,6 +13,7 @@ RUN npm config set registry https://registry.npmmirror.com && \
 FROM docker.1ms.run/library/node:24.17.0-alpine AS runner
 
 WORKDIR /app
+RUN chown node:node /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --chown=node:node . .
